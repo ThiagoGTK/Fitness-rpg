@@ -7,6 +7,7 @@ import { Zap, Flame, Trophy, Calendar, TrendingUp, Star, Dumbbell, Clock } from 
 import { format, parseISO, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
+import { BodyMap } from '../components/BodyMap';
 
 function StatCard({ icon, label, value, color = '#a855f7', sub }: {
   icon: React.ReactNode; label: string; value: string | number; color?: string; sub?: string;
@@ -121,6 +122,11 @@ export function Dashboard() {
         <StatCard icon={<Flame size={16} />} label="Maior streak" value={`${user.longestStreak} dias`} color="#f97316" />
         <StatCard icon={<Trophy size={16} />} label="Conquistas" value={`${unlockedCount}/${achievements.length}`} color="#eab308" />
         <StatCard icon={<Calendar size={16} />} label="Treinos registrados" value={workouts.length} color="#06b6d4" />
+      </div>
+
+      {/* Body map */}
+      <div className="game-card" style={{ padding: '20px', marginBottom: 20 }}>
+        <BodyMap />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 20 }}>
