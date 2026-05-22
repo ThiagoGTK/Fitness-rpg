@@ -1,0 +1,302 @@
+import { useGameStore } from '../store/gameStore';
+import { LevelBadge } from '../components/ui/LevelBadge';
+import { XPBar } from '../components/ui/XPBar';
+import { xpForMuscleLevel, xpForUserLevel } from '../services/levelCalculator';
+import { calcVolume } from '../services/xpCalculator';
+import { Zap, Flame, Trophy, Calendar, TrendingUp, Star, Dumbbell, Clock } from 'lucide-react';
+import { format, parseISO, isValid } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { useNavigate } from 'react-router-dom';
+
+function StatCard({ icon, label, value, color = '#a855f7', sub }: {
+  icon: React.ReactNode; label: string; value: string | number; color?: string; sub?: string;
+}) {
+  return (
+    <div className="game-card" style={{ padding: '16px 20px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+        <div style={{
+          width: 36, height: 36, borderRadius: 10,
+          background: `${color}20`, border: `1px solid ${color}40`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', color,
+        }}>
+          {icon}
+        </div>
+        <span style={{ fontSize: 12, color: '#64748b' }}>{label}</span>
+      </div>
+      <div style={{ fontSize: 24, fontWeight: 800, color: '#f1f5f9' }}>{value}</div>
+      {sub && <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{sub}</div>}
+    </div>
+  );
+}
+
+export function Dashboard() {
+  const { user, muscles, exercises, workouts, achievements } = useGameStore();
+  const navigate = useNavigate();
+
+  const sortedMuscles = [...muscles].sort((a, b) => b.totalXPEarned - a.totalXPEarned);
+  const topMuscles = sortedMuscles.slice(0, 4);
+  const weakestMuscles = [...muscles].sort((a, b) => a.totalXPEarned - b.totalXPEarned).slice(0, 3);
+  const topExercises = [...exercises].sort((a, b) => b.level - a.level || b.timesPerformed - a.timesPerformed).slice(0, 4);
+  const recentWorkouts = workouts.slice(0, 3);
+  const unlockedCount = achievements.filter(a => a.unlockedAt).length;
+
+  const userXPRequired = xpForUserLevel(user.level);
+  const userXPCurrent = user.totalXP - (() => {
+    let acc = 0; let lv = 1;
+    while (lv < user.level) { acc += xpForUserLevel(lv); lv++; }
+    return acc;
+  })();
+
+  function formatDate(iso: string) {
+    try {
+      const d = parseISO(iso);
+      if (!isValid(d)) return iso;
+      return format(d, "dd 'de' MMM", { locale: ptBR });
+    } catch { return iso; }
+  }
+
+  return (
+    <div className="fade-in-up" style={{ padding: '24px 20px', maxWidth: 1100, margin: '0 auto' }}>
+      {/* Header */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        flexWrap: 'wrap', gap: 16, marginBottom: 28,
+      }}>
+        <div>
+          <h1 style={{ margin: 0, fontSize: 28, fontWeight: 900, color: '#f1f5f9' }}>
+            Olá, {user.name}! 👋
+          </h1>
+          <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: 14 }}>
+            Continue evoluindo seus treinos
+          </p>
+        </div>
+        <button className="btn-primary" onClick={() => navigate('/log')} style={{ fontSize: 15 }}>
+          <Dumbbell size={18} /> Registrar Treino
+        </button>
+      </div>
+
+      {/* User level card */}
+      <div className="game-card" style={{
+        padding: '20px 24px', marginBottom: 24,
+        background: 'linear-gradient(135deg, #111827 0%, #1a1033 100%)',
+        border: '1px solid #7c3aed40',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
+          <LevelBadge level={user.level} size="lg" glow />
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
+              <span style={{ fontSize: 20, fontWeight: 800, color: '#f1f5f9' }}>Nível {user.level}</span>
+              <span style={{ fontSize: 13, color: '#64748b' }}>— {user.totalXP.toLocaleString()} XP total</span>
+            </div>
+            <XPBar current={userXPCurrent} required={userXPRequired} showLabel animated />
+            <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
+              {userXPRequired - userXPCurrent} XP para nível {user.level + 1}
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+            {user.streak > 0 && (
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 24 }}>🔥</div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: '#f97316' }}>{user.streak}</div>
+                <div style={{ fontSize: 11, color: '#64748b' }}>streak</div>
+              </div>
+            )}
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 24 }}>🏋️</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: '#a855f7' }}>{workouts.length}</div>
+              <div style={{ fontSize: 11, color: '#64748b' }}>treinos</div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 24 }}>🏆</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: '#eab308' }}>{unlockedCount}/{achievements.length}</div>
+              <div style={{ fontSize: 11, color: '#64748b' }}>conquistas</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12, marginBottom: 28 }}>
+        <StatCard icon={<Zap size={16} />} label="XP essa semana" value={`${user.weeklyXP.toLocaleString()} XP`} color="#eab308" />
+        <StatCard icon={<Flame size={16} />} label="Maior streak" value={`${user.longestStreak} dias`} color="#f97316" />
+        <StatCard icon={<Trophy size={16} />} label="Conquistas" value={`${unlockedCount}/${achievements.length}`} color="#eab308" />
+        <StatCard icon={<Calendar size={16} />} label="Treinos registrados" value={workouts.length} color="#06b6d4" />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 20 }}>
+        {/* Top muscles */}
+        <div className="game-card" style={{ padding: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#e2e8f0' }}>
+              💪 Músculos mais fortes
+            </h3>
+            <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => navigate('/muscles')}>Ver todos</button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {topMuscles.map(m => {
+              const req = xpForMuscleLevel(m.level);
+              return (
+                <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 18, width: 24, textAlign: 'center' }}>{m.icon}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 3 }}>
+                      <span style={{ fontWeight: 600, color: '#e2e8f0' }}>{m.name}</span>
+                      <span style={{ color: '#64748b', fontSize: 12 }}>Lv {m.level}</span>
+                    </div>
+                    <XPBar current={m.currentXP} required={req} color={m.color} animated={false} />
+                  </div>
+                  <LevelBadge level={m.level} size="sm" />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Top exercises */}
+        <div className="game-card" style={{ padding: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#e2e8f0' }}>
+              🏋️ Top Exercícios
+            </h3>
+            <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => navigate('/exercises')}>Ver todos</button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {topExercises.map((ex, i) => (
+              <div key={ex.id} style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '8px 10px', borderRadius: 8, background: '#0d1526',
+              }}>
+                <span style={{ fontSize: 13, fontWeight: 800, color: '#64748b', width: 16 }}>#{i + 1}</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#e2e8f0' }}>{ex.name}</div>
+                  <div style={{ fontSize: 11, color: '#64748b' }}>{ex.timesPerformed}× realizado</div>
+                </div>
+                <LevelBadge level={ex.level} size="sm" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Recent workouts */}
+        <div className="game-card" style={{ padding: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#e2e8f0' }}>
+              📋 Treinos recentes
+            </h3>
+            <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => navigate('/history')}>Ver todos</button>
+          </div>
+          {recentWorkouts.length === 0 ? (
+            <div style={{ textAlign: 'center', color: '#64748b', padding: 20, fontSize: 14 }}>
+              Nenhum treino ainda. <br />
+              <button className="btn-primary" style={{ marginTop: 12, fontSize: 13 }} onClick={() => navigate('/log')}>
+                Registrar primeiro treino
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {recentWorkouts.map(w => {
+                const totalVol = w.entries.reduce((s, e) => s + calcVolume(e.sets), 0);
+                return (
+                  <div key={w.id} style={{
+                    padding: '10px 12px', borderRadius: 8, background: '#0d1526',
+                    border: '1px solid #1e2d4a',
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: '#e2e8f0' }}>
+                        {w.entries.length} exercício{w.entries.length !== 1 ? 's' : ''}
+                      </span>
+                      <span style={{ fontSize: 11, color: '#64748b', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Clock size={11} /> {formatDate(w.date)}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 12 }}>
+                      <span style={{ fontSize: 11, color: '#eab308' }}>⚡ +{w.totalXP} XP</span>
+                      {totalVol > 0 && <span style={{ fontSize: 11, color: '#64748b' }}>📦 {totalVol.toLocaleString()} kg</span>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Weakest muscles */}
+        <div className="game-card" style={{ padding: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#e2e8f0' }}>
+              ⚠️ Músculos atrasados
+            </h3>
+          </div>
+          <p style={{ margin: '0 0 12px', fontSize: 12, color: '#64748b' }}>
+            Treinar esses grupos vai equilibrar seu desenvolvimento.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {weakestMuscles.map(m => {
+              const req = xpForMuscleLevel(m.level);
+              return (
+                <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 18, width: 24, textAlign: 'center' }}>{m.icon}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 3 }}>
+                      <span style={{ fontWeight: 600, color: '#e2e8f0' }}>{m.name}</span>
+                      <span style={{ fontSize: 12, color: '#ef4444' }}>Lv {m.level}</span>
+                    </div>
+                    <XPBar current={m.currentXP} required={req} color="#ef4444" animated={false} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <button className="btn-primary" style={{ width: '100%', marginTop: 14, justifyContent: 'center' }} onClick={() => navigate('/log')}>
+            <TrendingUp size={15} /> Treinar agora
+          </button>
+        </div>
+
+        {/* Recent achievements */}
+        {achievements.filter(a => a.unlockedAt).length > 0 && (
+          <div className="game-card" style={{ padding: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#e2e8f0' }}>
+                🏆 Conquistas recentes
+              </h3>
+              <button className="btn-ghost" style={{ fontSize: 12 }} onClick={() => navigate('/achievements')}>Ver todas</button>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {achievements.filter(a => a.unlockedAt).slice(0, 6).map(a => (
+                <div key={a.id} style={{
+                  padding: '6px 10px', borderRadius: 8,
+                  background: '#1a1a2e', border: '1px solid #eab30840',
+                  display: 'flex', alignItems: 'center', gap: 6, fontSize: 13,
+                }}>
+                  <span>{a.icon}</span>
+                  <span style={{ color: '#e2e8f0', fontSize: 12 }}>{a.title}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Quick stats */}
+        <div className="game-card" style={{ padding: '20px' }}>
+          <h3 style={{ margin: '0 0 16px', fontSize: 15, fontWeight: 700, color: '#e2e8f0' }}>
+            <Star size={15} style={{ display: 'inline', marginRight: 6, verticalAlign: 'middle', color: '#eab308' }} />
+            Visão geral
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {[
+              { label: 'Total de XP ganho', value: `${user.totalXP.toLocaleString()} XP`, color: '#eab308' },
+              { label: 'Exercícios cadastrados', value: exercises.length, color: '#a855f7' },
+              { label: 'Músculos treinados', value: muscles.filter(m => m.totalXPEarned > 0).length + '/' + muscles.length, color: '#10b981' },
+              { label: 'Nível médio dos músculos', value: (muscles.reduce((s, m) => s + m.level, 0) / muscles.length).toFixed(1), color: '#06b6d4' },
+            ].map(({ label, value, color }) => (
+              <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 13, color: '#64748b' }}>{label}</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color }}>{value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
