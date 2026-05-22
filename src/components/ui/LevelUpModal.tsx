@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useGameStore } from '../../store/gameStore';
-import { LevelUpEvent } from '../../types';
+import type { LevelUpEvent } from '../../types';
 
 function SingleLevelUp({ event, onDismiss }: { event: LevelUpEvent; onDismiss: () => void }) {
   useEffect(() => {

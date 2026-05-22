@@ -1,7 +1,6 @@
 import { useGameStore } from '../store/gameStore';
 import { format, parseISO, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Trophy, TrendingUp } from 'lucide-react';
 
 function formatDate(iso: string) {
   try {
@@ -22,7 +21,6 @@ export function RecordsPage() {
   const totalPRs = workouts.reduce((sum, w) => sum + w.entries.filter(e => e.isPR).length, 0);
   const mostPracticedEx = [...exercises].sort((a, b) => b.timesPerformed - a.timesPerformed)[0];
   const maxWeightRecord = personalRecords.reduce((max, r) => r.maxWeight > (max?.maxWeight || 0) ? r : max, personalRecords[0]);
-  const maxVolumeRecord = personalRecords.reduce((max, r) => r.maxVolume > (max?.maxVolume || 0) ? r : max, personalRecords[0]);
 
   return (
     <div className="fade-in-up" style={{ padding: '24px 20px', maxWidth: 900, margin: '0 auto' }}>

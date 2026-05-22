@@ -1,8 +1,5 @@
-import { MuscleGroup, Exercise, WorkoutSession, PersonalRecord } from '../types';
+import type { MuscleGroup, Exercise, WorkoutSession, PersonalRecord, UserProfile } from '../types';
 import { initAchievements } from '../services/achievementChecker';
-import { UserProfile } from '../types';
-
-function id(s: string) { return s; }
 
 export const SEED_MUSCLES: MuscleGroup[] = [
   { id: 'peito', name: 'Peito', level: 3, currentXP: 180, totalXPEarned: 1180, icon: '🫁', color: '#a855f7' },

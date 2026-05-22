@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import {
+import type {
   MuscleGroup, Exercise, WorkoutSession, WorkoutEntry,
   WorkoutSessionInput, Achievement, PersonalRecord, LevelUpEvent, UserProfile,
 } from '../types';

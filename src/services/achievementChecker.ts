@@ -1,4 +1,4 @@
-import { Achievement, WorkoutSession, MuscleGroup, Exercise, PersonalRecord } from '../types';
+import type { Achievement, WorkoutSession, MuscleGroup, Exercise, PersonalRecord } from '../types';
 
 const ALL_ACHIEVEMENTS: Omit<Achievement, 'unlockedAt'>[] = [
   { id: 'first_workout', title: 'Primeiro Passo', description: 'Registre seu primeiro treino', icon: '🏃' },

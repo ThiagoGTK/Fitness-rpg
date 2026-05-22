@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../store/gameStore';
-import { WorkoutSet, WorkoutEntryInput } from '../types';
+import type { WorkoutSet, WorkoutEntryInput, Exercise, MuscleGroup, WorkoutSession } from '../types';
 import { Plus, Trash2, ChevronDown, ChevronUp, Zap, CheckCircle, X } from 'lucide-react';
 import { calculateEntryXP, calcVolume } from '../services/xpCalculator';
 
@@ -39,10 +39,10 @@ function SetRow({ set, onChange, onRemove, idx }: {
 }
 
 function EntryCard({ entry, index, exercises, muscles, onUpdate, onRemove, prevSessions }: {
-  entry: EntryDraft; index: number; exercises: ReturnType<typeof useGameStore>['exercises'];
-  muscles: ReturnType<typeof useGameStore>['muscles'];
+  entry: EntryDraft; index: number;
+  exercises: Exercise[]; muscles: MuscleGroup[];
   onUpdate: (e: EntryDraft) => void; onRemove: () => void;
-  prevSessions: ReturnType<typeof useGameStore>['workouts'];
+  prevSessions: WorkoutSession[];
 }) {
   const exercise = exercises.find(e => e.id === entry.exerciseId);
   const primaryMuscle = exercise ? muscles.find(m => m.id === exercise.primaryMuscleId) : null;

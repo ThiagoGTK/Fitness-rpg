@@ -2,9 +2,6 @@ import { useGameStore } from '../store/gameStore';
 import { LevelBadge } from '../components/ui/LevelBadge';
 import { XPBar } from '../components/ui/XPBar';
 import { xpForMuscleLevel } from '../services/levelCalculator';
-import { Zap } from 'lucide-react';
-
-type SortKey = 'level' | 'xp' | 'name' | 'trained';
 
 export function MusclesPage() {
   const { muscles, exercises, workouts } = useGameStore();

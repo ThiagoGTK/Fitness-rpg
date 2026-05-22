@@ -1,4 +1,4 @@
-import { WorkoutEntryInput, WorkoutSet, WorkoutSession, Exercise } from '../types';
+import type { WorkoutEntryInput, WorkoutSet, WorkoutSession, Exercise } from '../types';
 
 export function calcVolume(sets: WorkoutSet[]): number {
   return sets.reduce((sum, s) => sum + s.weight * s.reps, 0);

@@ -3,7 +3,8 @@ import { useGameStore } from '../store/gameStore';
 import { LevelBadge } from '../components/ui/LevelBadge';
 import { XPBar } from '../components/ui/XPBar';
 import { xpForExerciseLevel } from '../services/levelCalculator';
-import { Exercise, ExerciseType, EXERCISE_TYPE_LABELS } from '../types';
+import { EXERCISE_TYPE_LABELS } from '../types';
+import type { Exercise, ExerciseType } from '../types';
 import { Plus, Pencil, Trash2, X, Save } from 'lucide-react';
 
 const TYPE_COLORS: Record<ExerciseType, string> = {
