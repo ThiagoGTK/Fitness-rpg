@@ -3,11 +3,12 @@ import { LevelBadge } from '../components/ui/LevelBadge';
 import { XPBar } from '../components/ui/XPBar';
 import { xpForMuscleLevel, xpForUserLevel } from '../services/levelCalculator';
 import { calcVolume } from '../services/xpCalculator';
-import { Zap, Flame, Trophy, Calendar, TrendingUp, Star, Dumbbell, Clock } from 'lucide-react';
+import { Zap, Flame, Trophy, Calendar, TrendingUp, Star, Dumbbell, Clock, Trash2 } from 'lucide-react';
 import { format, parseISO, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
 import { BodyMap } from '../components/BodyMap';
+import { useState } from 'react';
 
 function StatCard({ icon, label, value, color = '#a855f7', sub }: {
   icon: React.ReactNode; label: string; value: string | number; color?: string; sub?: string;
@@ -31,8 +32,9 @@ function StatCard({ icon, label, value, color = '#a855f7', sub }: {
 }
 
 export function Dashboard() {
-  const { user, muscles, exercises, workouts, achievements } = useGameStore();
+  const { user, muscles, exercises, workouts, achievements, cleanReset } = useGameStore();
   const navigate = useNavigate();
+  const [showReset, setShowReset] = useState(false);
 
   const sortedMuscles = [...muscles].sort((a, b) => b.totalXPEarned - a.totalXPEarned);
   const topMuscles = sortedMuscles.slice(0, 4);
@@ -303,6 +305,66 @@ export function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Reset button */}
+      <div style={{ marginTop: 32, textAlign: 'center' }}>
+        <button
+          onClick={() => setShowReset(true)}
+          style={{
+            background: 'none', border: '1px solid #ef444430', borderRadius: 8,
+            padding: '8px 16px', cursor: 'pointer', color: '#475569', fontSize: 12,
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+          }}
+        >
+          <Trash2 size={12} /> Zerar dados
+        </button>
+      </div>
+
+      {/* Reset confirm modal */}
+      {showReset && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.85)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+        }}>
+          <div style={{
+            background: '#111827', border: '1px solid #ef444440', borderRadius: 16,
+            padding: 28, maxWidth: 360, width: '100%', textAlign: 'center',
+          }}>
+            <div style={{ fontSize: 48, marginBottom: 12 }}>⚠️</div>
+            <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 800, color: '#f1f5f9' }}>
+              Zerar todos os dados?
+            </h3>
+            <p style={{ margin: '0 0 6px', fontSize: 14, color: '#94a3b8' }}>
+              Apaga <strong style={{ color: '#f1f5f9' }}>treinos, recordes, XP e conquistas</strong>.
+            </p>
+            <p style={{ margin: '0 0 24px', fontSize: 13, color: '#64748b' }}>
+              Os exercícios são mantidos, mas com nível e XP zerados.
+            </p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => { cleanReset(); setShowReset(false); }}
+                style={{
+                  flex: 1, padding: '12px', borderRadius: 8, border: 'none',
+                  background: '#ef4444', color: 'white', fontWeight: 700, fontSize: 14,
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                }}
+              >
+                <Trash2 size={14} /> Sim, zerar tudo
+              </button>
+              <button
+                onClick={() => setShowReset(false)}
+                style={{
+                  flex: 1, padding: '12px', borderRadius: 8,
+                  border: '1px solid #1e2d4a', background: 'transparent',
+                  color: '#94a3b8', fontWeight: 600, fontSize: 14, cursor: 'pointer',
+                }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
