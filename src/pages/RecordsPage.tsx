@@ -23,16 +23,16 @@ export function RecordsPage() {
   const maxWeightRecord = personalRecords.reduce((max, r) => r.maxWeight > (max?.maxWeight || 0) ? r : max, personalRecords[0]);
 
   return (
-    <div className="fade-in-up" style={{ padding: '24px 20px', maxWidth: 900, margin: '0 auto' }}>
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ margin: 0, fontSize: 26, fontWeight: 900, color: '#f1f5f9' }}>🎯 Recordes Pessoais</h1>
-        <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: 14 }}>
+    <div className="page-wrap fade-in-up" style={{ maxWidth: 900 }}>
+      <div style={{ marginBottom: 16 }}>
+        <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, color: '#f1f5f9' }}>🎯 Recordes Pessoais</h1>
+        <p style={{ margin: '2px 0 0', color: '#64748b', fontSize: 13 }}>
           Seus melhores desempenhos de todos os tempos
         </p>
       </div>
 
       {/* Highlights */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12, marginBottom: 28 }}>
+      <div className="grid-summary">
         <div className="game-card" style={{ padding: '16px', textAlign: 'center', border: '1px solid #eab30840', background: 'linear-gradient(135deg, #111827, #1a1a2e)' }}>
           <div style={{ fontSize: 28, marginBottom: 4 }}>🏆</div>
           <div style={{ fontSize: 22, fontWeight: 800, color: '#eab308' }}>{totalPRs}</div>
@@ -97,32 +97,32 @@ export function RecordsPage() {
                   </div>
 
                   {/* Records */}
-                  <div style={{ display: 'flex', gap: 16, flex: 1, flexWrap: 'wrap' }}>
-                    <div style={{ textAlign: 'center', minWidth: 80 }}>
-                      <div style={{ fontSize: 10, color: '#64748b', marginBottom: 2 }}>MAIOR CARGA</div>
+                  <div className="records-stats">
+                    <div className="records-stat">
+                      <div style={{ fontSize: 10, color: '#64748b', marginBottom: 2 }}>CARGA</div>
                       <div style={{ fontSize: 18, fontWeight: 800, color: '#a855f7' }}>
                         {record.maxWeight > 0 ? `${record.maxWeight}kg` : 'PC'}
                       </div>
                     </div>
-                    <div style={{ textAlign: 'center', minWidth: 80 }}>
-                      <div style={{ fontSize: 10, color: '#64748b', marginBottom: 2 }}>MAIOR VOLUME</div>
+                    <div className="records-stat">
+                      <div style={{ fontSize: 10, color: '#64748b', marginBottom: 2 }}>VOLUME</div>
                       <div style={{ fontSize: 18, fontWeight: 800, color: '#06b6d4' }}>
                         {record.maxVolume.toLocaleString()}<span style={{ fontSize: 11 }}>kg</span>
                       </div>
                     </div>
-                    <div style={{ textAlign: 'center', minWidth: 80 }}>
-                      <div style={{ fontSize: 10, color: '#64748b', marginBottom: 2 }}>MAX REPS/SÉRIE</div>
+                    <div className="records-stat">
+                      <div style={{ fontSize: 10, color: '#64748b', marginBottom: 2 }}>REPS</div>
                       <div style={{ fontSize: 18, fontWeight: 800, color: '#10b981' }}>
                         {record.maxRepsInSet}
                       </div>
                     </div>
-                    <div style={{ textAlign: 'center', minWidth: 80 }}>
-                      <div style={{ fontSize: 10, color: '#64748b', marginBottom: 2 }}>MAX SÉRIES</div>
+                    <div className="records-stat">
+                      <div style={{ fontSize: 10, color: '#64748b', marginBottom: 2 }}>SÉRIES</div>
                       <div style={{ fontSize: 18, fontWeight: 800, color: '#f97316' }}>
                         {record.maxSetsInSession}
                       </div>
                     </div>
-                    <div style={{ textAlign: 'center', minWidth: 80 }}>
+                    <div className="records-stat">
                       <div style={{ fontSize: 10, color: '#64748b', marginBottom: 2 }}>VEZES</div>
                       <div style={{ fontSize: 18, fontWeight: 800, color: '#eab308' }}>
                         {ex.timesPerformed}

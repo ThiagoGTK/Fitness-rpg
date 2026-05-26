@@ -169,27 +169,28 @@ export function Navigation() {
         </div>
       )}
 
-      {/* Bottom nav (mobile) */}
+      {/* Bottom nav (mobile) — all 7 items, icon + label for active */}
       <nav style={{
         position: 'fixed', bottom: 0, left: 0, right: 0,
         background: '#0d1526', borderTop: '1px solid #1e2d4a',
-        display: 'flex', zIndex: 50, padding: '6px 0',
+        display: 'flex', zIndex: 50, padding: '4px 0',
       }}
         className="mobile-nav"
       >
-        {NAV.slice(0, 5).map(({ to, icon: Icon, label }) => {
+        {NAV.map(({ to, icon: Icon, label }) => {
           const active = to === '/' ? location.pathname === '/' : location.pathname.startsWith(to);
           return (
             <NavLink
               key={to} to={to}
               style={{
                 flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
-                gap: 2, textDecoration: 'none', fontSize: 10,
-                color: active ? '#a855f7' : '#64748b',
-                padding: '4px 0',
+                gap: 1, textDecoration: 'none', fontSize: 9, fontWeight: active ? 700 : 400,
+                color: active ? '#a855f7' : '#475569',
+                padding: '5px 2px',
+                borderTop: active ? '2px solid #a855f7' : '2px solid transparent',
               }}
             >
-              <Icon size={18} />
+              <Icon size={17} />
               <span>{label}</span>
             </NavLink>
           );

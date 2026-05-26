@@ -59,79 +59,79 @@ export function Dashboard() {
   }
 
   return (
-    <div className="fade-in-up" style={{ padding: '24px 20px', maxWidth: 1100, margin: '0 auto' }}>
+    <div className="page-wrap fade-in-up">
       {/* Header */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        flexWrap: 'wrap', gap: 16, marginBottom: 28,
+        flexWrap: 'wrap', gap: 12, marginBottom: 20,
       }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: 28, fontWeight: 900, color: '#f1f5f9' }}>
+          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, color: '#f1f5f9' }}>
             Olá, {user.name}! 👋
           </h1>
-          <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: 14 }}>
+          <p style={{ margin: '2px 0 0', color: '#64748b', fontSize: 13 }}>
             Continue evoluindo seus treinos
           </p>
         </div>
-        <button className="btn-primary" onClick={() => navigate('/log')} style={{ fontSize: 15 }}>
-          <Dumbbell size={18} /> Registrar Treino
+        <button className="btn-primary" onClick={() => navigate('/log')}>
+          <Dumbbell size={16} /> Registrar Treino
         </button>
       </div>
 
       {/* User level card */}
       <div className="game-card" style={{
-        padding: '20px 24px', marginBottom: 24,
+        padding: '16px', marginBottom: 16,
         background: 'linear-gradient(135deg, #111827 0%, #1a1033 100%)',
         border: '1px solid #7c3aed40',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
+        <div className="level-card-inner">
           <LevelBadge level={user.level} size="lg" glow />
-          <div style={{ flex: 1, minWidth: 200 }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
-              <span style={{ fontSize: 20, fontWeight: 800, color: '#f1f5f9' }}>Nível {user.level}</span>
-              <span style={{ fontSize: 13, color: '#64748b' }}>— {user.totalXP.toLocaleString()} XP total</span>
+          <div style={{ flex: 1, minWidth: 140 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 18, fontWeight: 800, color: '#f1f5f9' }}>Nível {user.level}</span>
+              <span style={{ fontSize: 12, color: '#64748b' }}>{user.totalXP.toLocaleString()} XP</span>
             </div>
             <XPBar current={userXPCurrent} required={userXPRequired} showLabel animated />
-            <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
+            <div style={{ fontSize: 11, color: '#64748b', marginTop: 3 }}>
               {userXPRequired - userXPCurrent} XP para nível {user.level + 1}
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 16 }}>
             {user.streak > 0 && (
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 24 }}>🔥</div>
-                <div style={{ fontSize: 18, fontWeight: 800, color: '#f97316' }}>{user.streak}</div>
-                <div style={{ fontSize: 11, color: '#64748b' }}>streak</div>
+                <div style={{ fontSize: 20 }}>🔥</div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: '#f97316' }}>{user.streak}</div>
+                <div style={{ fontSize: 10, color: '#64748b' }}>streak</div>
               </div>
             )}
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 24 }}>🏋️</div>
-              <div style={{ fontSize: 18, fontWeight: 800, color: '#a855f7' }}>{workouts.length}</div>
-              <div style={{ fontSize: 11, color: '#64748b' }}>treinos</div>
+              <div style={{ fontSize: 20 }}>🏋️</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: '#a855f7' }}>{workouts.length}</div>
+              <div style={{ fontSize: 10, color: '#64748b' }}>treinos</div>
             </div>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 24 }}>🏆</div>
-              <div style={{ fontSize: 18, fontWeight: 800, color: '#eab308' }}>{unlockedCount}/{achievements.length}</div>
-              <div style={{ fontSize: 11, color: '#64748b' }}>conquistas</div>
+              <div style={{ fontSize: 20 }}>🏆</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: '#eab308' }}>{unlockedCount}/{achievements.length}</div>
+              <div style={{ fontSize: 10, color: '#64748b' }}>conquistas</div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Stats grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12, marginBottom: 28 }}>
+      <div className="grid-stat">
         <StatCard icon={<Zap size={16} />} label="XP essa semana" value={`${user.weeklyXP.toLocaleString()} XP`} color="#eab308" />
         <StatCard icon={<Flame size={16} />} label="Maior streak" value={`${user.longestStreak} dias`} color="#f97316" />
         <StatCard icon={<Trophy size={16} />} label="Conquistas" value={`${unlockedCount}/${achievements.length}`} color="#eab308" />
-        <StatCard icon={<Calendar size={16} />} label="Treinos registrados" value={workouts.length} color="#06b6d4" />
+        <StatCard icon={<Calendar size={16} />} label="Treinos" value={workouts.length} color="#06b6d4" />
       </div>
 
       {/* Body map */}
-      <div className="game-card" style={{ padding: '20px', marginBottom: 20 }}>
+      <div className="game-card" style={{ padding: '16px', marginBottom: 16 }}>
         <BodyMap />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 20 }}>
+      <div className="grid-cards">
         {/* Top muscles */}
         <div className="game-card" style={{ padding: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>

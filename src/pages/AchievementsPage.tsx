@@ -17,9 +17,9 @@ export function AchievementsPage() {
   const locked = achievements.filter(a => !a.unlockedAt);
 
   return (
-    <div className="fade-in-up" style={{ padding: '24px 20px', maxWidth: 900, margin: '0 auto' }}>
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ margin: 0, fontSize: 26, fontWeight: 900, color: '#f1f5f9' }}>🏆 Conquistas</h1>
+    <div className="page-wrap fade-in-up" style={{ maxWidth: 900 }}>
+      <div style={{ marginBottom: 16 }}>
+        <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, color: '#f1f5f9' }}>🏆 Conquistas</h1>
         <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: 14 }}>
           {unlocked.length} de {achievements.length} conquistadas
         </p>
@@ -52,7 +52,7 @@ export function AchievementsPage() {
           <h3 style={{ fontSize: 15, fontWeight: 700, color: '#eab308', marginBottom: 14 }}>
             ⭐ Conquistadas ({unlocked.length})
           </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12, marginBottom: 28 }}>
+          <div className="grid-items" style={{ marginBottom: 24 }}>
             {unlocked.map(a => (
               <div key={a.id} className="game-card" style={{
                 padding: '16px 18px',
@@ -91,7 +91,7 @@ export function AchievementsPage() {
             <Lock size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }} />
             Bloqueadas ({locked.length})
           </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
+          <div className="grid-items">
             {locked.map(a => (
               <div key={a.id} className="game-card" style={{ padding: '16px 18px', opacity: 0.6 }}>
                 <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>

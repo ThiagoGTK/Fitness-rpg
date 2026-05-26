@@ -160,13 +160,13 @@ export function ExercisesPage() {
   function getMuscle(id: string) { return muscles.find(m => m.id === id); }
 
   return (
-    <div className="fade-in-up" style={{ padding: '24px 20px', maxWidth: 1100, margin: '0 auto' }}>
+    <div className="page-wrap fade-in-up">
       {(showModal || editing) && (
         <ExerciseModal exercise={editing} onClose={() => { setShowModal(false); setEditing(undefined); }} />
       )}
       {confirmDelete && (
         <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div className="modal-content game-card" style={{ padding: 28, maxWidth: 360, textAlign: 'center' }}>
+          <div className="modal-content game-card" style={{ padding: 24, maxWidth: 340, width: '100%', textAlign: 'center' }}>
             <div style={{ fontSize: 36, marginBottom: 12 }}>🗑️</div>
             <h3 style={{ margin: '0 0 8px', color: '#f1f5f9' }}>Excluir exercício?</h3>
             <p style={{ color: '#64748b', fontSize: 14, margin: '0 0 20px' }}>Esta ação não pode ser desfeita.</p>
@@ -180,10 +180,10 @@ export function ExercisesPage() {
         </div>
       )}
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: 26, fontWeight: 900, color: '#f1f5f9' }}>🏋️ Exercícios</h1>
-          <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: 14 }}>{exercises.length} exercícios cadastrados</p>
+          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, color: '#f1f5f9' }}>🏋️ Exercícios</h1>
+          <p style={{ margin: '2px 0 0', color: '#64748b', fontSize: 13 }}>{exercises.length} exercícios cadastrados</p>
         </div>
         <button className="btn-primary" onClick={() => setShowModal(true)}>
           <Plus size={16} /> Novo Exercício
@@ -191,20 +191,20 @@ export function ExercisesPage() {
       </div>
 
       {/* Filters */}
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 20 }}>
-        <input className="game-input" style={{ maxWidth: 220 }} placeholder="Buscar exercício..." value={search} onChange={e => setSearch(e.target.value)} />
-        <select className="game-input" style={{ maxWidth: 180 }} value={filterType} onChange={e => setFilterType(e.target.value)}>
+      <div className="filter-row">
+        <input className="game-input" placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} />
+        <select className="game-input" value={filterType} onChange={e => setFilterType(e.target.value)}>
           <option value="">Todos os tipos</option>
           {Object.entries(EXERCISE_TYPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
-        <select className="game-input" style={{ maxWidth: 180 }} value={filterMuscle} onChange={e => setFilterMuscle(e.target.value)}>
+        <select className="game-input" value={filterMuscle} onChange={e => setFilterMuscle(e.target.value)}>
           <option value="">Todos os músculos</option>
           {muscles.map(m => <option key={m.id} value={m.id}>{m.icon} {m.name}</option>)}
         </select>
       </div>
 
       {/* Exercise list */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 14 }}>
+      <div className="grid-exercises">
         {sorted.map(ex => {
           const pm = getMuscle(ex.primaryMuscleId);
           const req = xpForExerciseLevel(ex.level);

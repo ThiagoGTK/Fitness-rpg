@@ -223,13 +223,13 @@ export function BodyMap() {
       </div>
 
       {/* Side-by-side views */}
-      <div style={{ display: 'flex', justifyContent: 'center', gap: 32, flexWrap: 'wrap' }}>
+      <div className="bodymap-views">
         {/* Front */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
           <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: '#475569', textTransform: 'uppercase' }}>
             Frente
           </span>
-          <svg viewBox="0 0 200 410" width="180" height="369" style={{ overflow: 'visible', display: 'block' }}>
+          <svg className="bodymap-svg" viewBox="0 0 200 410" style={{ overflow: 'visible', display: 'block' }}>
             <SvgDefs suffix="-front" />
             <BodySilhouette />
             {renderRegions(FRONT_REGIONS, FRONT_LABEL, '-front')}
@@ -237,17 +237,14 @@ export function BodyMap() {
         </div>
 
         {/* Divider */}
-        <div style={{
-          width: 1, background: '#1e2d4a', alignSelf: 'stretch', flexShrink: 0,
-          display: 'flex', alignItems: 'center',
-        }} />
+        <div className="bodymap-divider" />
 
         {/* Back */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
           <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: '#475569', textTransform: 'uppercase' }}>
             Costas
           </span>
-          <svg viewBox="0 0 200 410" width="180" height="369" style={{ overflow: 'visible', display: 'block' }}>
+          <svg className="bodymap-svg" viewBox="0 0 200 410" style={{ overflow: 'visible', display: 'block' }}>
             <SvgDefs suffix="-back" />
             <BodySilhouette />
             {renderRegions(BACK_REGIONS, BACK_LABEL, '-back')}

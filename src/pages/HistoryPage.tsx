@@ -47,14 +47,14 @@ export function HistoryPage() {
     s + w.entries.reduce((es, e) => es + calcVolume(e.sets), 0), 0);
 
   return (
-    <div className="fade-in-up" style={{ padding: '24px 20px', maxWidth: 900, margin: '0 auto' }}>
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ margin: 0, fontSize: 26, fontWeight: 900, color: '#f1f5f9' }}>📋 Histórico de Treinos</h1>
-        <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: 14 }}>{totalSessions} sessões registradas</p>
+    <div className="page-wrap fade-in-up" style={{ maxWidth: 900 }}>
+      <div style={{ marginBottom: 16 }}>
+        <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, color: '#f1f5f9' }}>📋 Histórico de Treinos</h1>
+        <p style={{ margin: '2px 0 0', color: '#64748b', fontSize: 13 }}>{totalSessions} sessões registradas</p>
       </div>
 
       {/* Summary */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12, marginBottom: 24 }}>
+      <div className="grid-summary">
         {[
           { label: 'Total de sessões', value: totalSessions, icon: '📅', color: '#a855f7' },
           { label: 'XP total ganho', value: `${totalXP.toLocaleString()}`, icon: '⚡', color: '#eab308' },
@@ -69,13 +69,13 @@ export function HistoryPage() {
       </div>
 
       {/* Filters */}
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 20 }}>
-        <input className="game-input" style={{ maxWidth: 220 }} placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} />
-        <select className="game-input" style={{ maxWidth: 200 }} value={filterExercise} onChange={e => setFilterExercise(e.target.value)}>
+      <div className="filter-row">
+        <input className="game-input" placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} />
+        <select className="game-input" value={filterExercise} onChange={e => setFilterExercise(e.target.value)}>
           <option value="">Todos os exercícios</option>
           {exercises.map(ex => <option key={ex.id} value={ex.id}>{ex.name}</option>)}
         </select>
-        <select className="game-input" style={{ maxWidth: 180 }} value={filterMuscle} onChange={e => setFilterMuscle(e.target.value)}>
+        <select className="game-input" value={filterMuscle} onChange={e => setFilterMuscle(e.target.value)}>
           <option value="">Todos os músculos</option>
           {muscles.map(m => <option key={m.id} value={m.id}>{m.icon} {m.name}</option>)}
         </select>

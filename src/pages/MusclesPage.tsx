@@ -26,19 +26,19 @@ export function MusclesPage() {
   const totalXP = muscles.reduce((s, m) => s + m.totalXPEarned, 0);
 
   return (
-    <div className="fade-in-up" style={{ padding: '24px 20px', maxWidth: 1100, margin: '0 auto' }}>
+    <div className="page-wrap fade-in-up">
       {/* Header */}
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ margin: 0, fontSize: 26, fontWeight: 900, color: '#f1f5f9' }}>
+      <div style={{ marginBottom: 16 }}>
+        <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, color: '#f1f5f9' }}>
           💪 Grupos Musculares
         </h1>
-        <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: 14 }}>
+        <p style={{ margin: '2px 0 0', color: '#64748b', fontSize: 13 }}>
           Acompanhe a evolução de cada músculo
         </p>
       </div>
 
       {/* Summary */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12, marginBottom: 28 }}>
+      <div className="grid-stat">
         {[
           { label: 'Nível médio', value: avgLevel, icon: '📊' },
           { label: 'Maior nível', value: maxLevel, icon: '🏆' },
