@@ -9,7 +9,7 @@ import { calculateEntryXP, calcVolume, calcMaxWeight } from '../services/xpCalcu
 import {
   processLevelUp, xpForMuscleLevel, xpForExerciseLevel, calculateUserLevel,
 } from '../services/levelCalculator';
-import { checkAchievements } from '../services/achievementChecker';
+import { checkAchievements, initAchievements } from '../services/achievementChecker';
 
 let _uid = Date.now();
 function uid() { return (++_uid).toString(36); }
@@ -29,6 +29,7 @@ interface GameStore {
   deleteExercise: (id: string) => void;
   dismissLevelUp: (id: string) => void;
   resetData: () => void;
+  cleanReset: () => void;
 }
 
 export const useGameStore = create<GameStore>()(
@@ -184,6 +185,28 @@ export const useGameStore = create<GameStore>()(
 
       resetData: () => {
         set({ ...buildSeedState(), pendingLevelUps: [] });
+      },
+
+      cleanReset: () => {
+        const s = get();
+        set({
+          muscles: s.muscles.map(m => ({ ...m, level: 1, currentXP: 0, totalXPEarned: 0 })),
+          exercises: s.exercises.map(e => ({ ...e, level: 1, currentXP: 0, totalXPEarned: 0, timesPerformed: 0 })),
+          workouts: [],
+          personalRecords: [],
+          achievements: initAchievements(),
+          pendingLevelUps: [],
+          user: {
+            name: s.user.name,
+            joinedAt: s.user.joinedAt,
+            level: 1,
+            totalXP: 0,
+            weeklyXP: 0,
+            streak: 0,
+            longestStreak: 0,
+            lastTrainedDate: undefined,
+          },
+        });
       },
     }),
     { name: 'fitness-rpg-v1' }

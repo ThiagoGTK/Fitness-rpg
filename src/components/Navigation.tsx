@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Dumbbell, List, PlusCircle, History, Trophy, Target, Zap } from 'lucide-react';
+import { LayoutDashboard, Dumbbell, List, PlusCircle, History, Trophy, Target, Zap, Trash2, X } from 'lucide-react';
 import { useGameStore } from '../store/gameStore';
 import { LevelBadge } from './ui/LevelBadge';
 
@@ -14,8 +15,14 @@ const NAV = [
 ];
 
 export function Navigation() {
-  const { user } = useGameStore();
+  const { user, cleanReset } = useGameStore();
   const location = useLocation();
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  function handleReset() {
+    cleanReset();
+    setShowConfirm(false);
+  }
 
   return (
     <>
@@ -90,10 +97,77 @@ export function Navigation() {
           })}
         </div>
 
-        <div style={{ padding: '12px 16px', borderTop: '1px solid #1e2d4a', fontSize: 11, color: '#334155' }}>
-          v1.0.0 · FitRPG
+        <div style={{ padding: '12px 16px', borderTop: '1px solid #1e2d4a' }}>
+          <button
+            onClick={() => setShowConfirm(true)}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+              background: 'none', border: '1px solid #ef444430', borderRadius: 8,
+              padding: '8px 10px', cursor: 'pointer', color: '#64748b', fontSize: 12,
+              transition: 'background 0.15s, color 0.15s',
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#ef444415'; (e.currentTarget as HTMLButtonElement).style.color = '#ef4444'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'none'; (e.currentTarget as HTMLButtonElement).style.color = '#64748b'; }}
+          >
+            <Trash2 size={13} />
+            Zerar dados
+          </button>
+          <div style={{ marginTop: 8, fontSize: 10, color: '#1e2d4a', textAlign: 'center' }}>v1.0.0 · FitRPG</div>
         </div>
       </nav>
+
+      {/* Confirm modal */}
+      {showConfirm && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.8)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+        }}>
+          <div style={{
+            background: '#111827', border: '1px solid #ef444440', borderRadius: 16,
+            padding: 28, maxWidth: 360, width: '100%', textAlign: 'center',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
+          }}>
+            <button
+              onClick={() => setShowConfirm(false)}
+              style={{ position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: 4 }}
+            >
+              <X size={16} />
+            </button>
+            <div style={{ fontSize: 48, marginBottom: 12 }}>⚠️</div>
+            <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 800, color: '#f1f5f9' }}>
+              Zerar todos os dados?
+            </h3>
+            <p style={{ margin: '0 0 6px', fontSize: 14, color: '#94a3b8' }}>
+              Isso vai apagar <strong style={{ color: '#f1f5f9' }}>todos os treinos, recordes, XP e conquistas</strong>.
+            </p>
+            <p style={{ margin: '0 0 24px', fontSize: 13, color: '#64748b' }}>
+              Os exercícios cadastrados serão mantidos, mas com nível e XP zerados.
+            </p>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+              <button
+                onClick={handleReset}
+                style={{
+                  flex: 1, padding: '10px 16px', borderRadius: 8, border: 'none',
+                  background: '#ef4444', color: 'white', fontWeight: 700, fontSize: 14,
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                }}
+              >
+                <Trash2 size={14} /> Sim, zerar tudo
+              </button>
+              <button
+                onClick={() => setShowConfirm(false)}
+                style={{
+                  flex: 1, padding: '10px 16px', borderRadius: 8,
+                  border: '1px solid #1e2d4a', background: 'transparent',
+                  color: '#94a3b8', fontWeight: 600, fontSize: 14, cursor: 'pointer',
+                }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Bottom nav (mobile) */}
       <nav style={{

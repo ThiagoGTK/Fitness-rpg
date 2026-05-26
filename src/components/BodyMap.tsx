@@ -1,7 +1,6 @@
 import { useState, useRef } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { xpForMuscleLevel } from '../services/levelCalculator';
-import { RotateCcw } from 'lucide-react';
 
 interface Region {
   muscleId: string;
@@ -16,18 +15,18 @@ interface TooltipState {
 
 // Muscle overlay regions — front view
 const FRONT_REGIONS: Region[] = [
-  { muscleId: 'ombros',     cx: 44,  cy: 93,  rx: 18, ry: 14 },
-  { muscleId: 'ombros',     cx: 156, cy: 93,  rx: 18, ry: 14 },
-  { muscleId: 'peito',      cx: 100, cy: 122, rx: 34, ry: 24 },
-  { muscleId: 'biceps',     cx: 28,  cy: 145, rx: 11, ry: 21 },
-  { muscleId: 'biceps',     cx: 172, cy: 145, rx: 11, ry: 21 },
-  { muscleId: 'antebraco',  cx: 21,  cy: 187, rx: 9,  ry: 20 },
-  { muscleId: 'antebraco',  cx: 179, cy: 187, rx: 9,  ry: 20 },
-  { muscleId: 'abdomen',    cx: 100, cy: 175, rx: 23, ry: 26 },
-  { muscleId: 'quadriceps', cx: 75,  cy: 284, rx: 20, ry: 36 },
-  { muscleId: 'quadriceps', cx: 125, cy: 284, rx: 20, ry: 36 },
-  { muscleId: 'panturrilha',cx: 73,  cy: 365, rx: 14, ry: 27 },
-  { muscleId: 'panturrilha',cx: 127, cy: 365, rx: 14, ry: 27 },
+  { muscleId: 'ombros',      cx: 44,  cy: 93,  rx: 18, ry: 14 },
+  { muscleId: 'ombros',      cx: 156, cy: 93,  rx: 18, ry: 14 },
+  { muscleId: 'peito',       cx: 100, cy: 122, rx: 34, ry: 24 },
+  { muscleId: 'biceps',      cx: 28,  cy: 145, rx: 11, ry: 21 },
+  { muscleId: 'biceps',      cx: 172, cy: 145, rx: 11, ry: 21 },
+  { muscleId: 'antebraco',   cx: 21,  cy: 187, rx: 9,  ry: 20 },
+  { muscleId: 'antebraco',   cx: 179, cy: 187, rx: 9,  ry: 20 },
+  { muscleId: 'abdomen',     cx: 100, cy: 175, rx: 23, ry: 26 },
+  { muscleId: 'quadriceps',  cx: 75,  cy: 284, rx: 20, ry: 36 },
+  { muscleId: 'quadriceps',  cx: 125, cy: 284, rx: 20, ry: 36 },
+  { muscleId: 'panturrilha', cx: 73,  cy: 365, rx: 14, ry: 27 },
+  { muscleId: 'panturrilha', cx: 127, cy: 365, rx: 14, ry: 27 },
 ];
 
 // Muscle overlay regions — back view
@@ -46,26 +45,24 @@ const BACK_REGIONS: Region[] = [
   { muscleId: 'panturrilha', cx: 127, cy: 368, rx: 14, ry: 27 },
 ];
 
-// Centroid label position per unique muscle (front)
 const FRONT_LABEL: Record<string, { x: number; y: number }> = {
-  ombros:     { x: 100, y: 79 },
-  peito:      { x: 100, y: 122 },
-  biceps:     { x: 28,  y: 145 },
-  antebraco:  { x: 21,  y: 187 },
-  abdomen:    { x: 100, y: 175 },
-  quadriceps: { x: 100, y: 284 },
-  panturrilha:{ x: 100, y: 365 },
+  ombros:      { x: 100, y: 79 },
+  peito:       { x: 100, y: 122 },
+  biceps:      { x: 28,  y: 145 },
+  antebraco:   { x: 21,  y: 187 },
+  abdomen:     { x: 100, y: 175 },
+  quadriceps:  { x: 100, y: 284 },
+  panturrilha: { x: 100, y: 365 },
 };
 
-// Centroid label position per unique muscle (back)
 const BACK_LABEL: Record<string, { x: number; y: number }> = {
-  trapezio:   { x: 100, y: 90 },
-  costas:     { x: 100, y: 148 },
-  triceps:    { x: 28,  y: 142 },
-  lombar:     { x: 100, y: 200 },
-  gluteos:    { x: 100, y: 246 },
-  posteriores:{ x: 100, y: 300 },
-  panturrilha:{ x: 100, y: 368 },
+  trapezio:    { x: 100, y: 90 },
+  costas:      { x: 100, y: 148 },
+  triceps:     { x: 28,  y: 142 },
+  lombar:      { x: 100, y: 200 },
+  gluteos:     { x: 100, y: 246 },
+  posteriores: { x: 100, y: 300 },
+  panturrilha: { x: 100, y: 368 },
 };
 
 function levelFill(level: number): string {
@@ -84,13 +81,12 @@ function levelOpacity(level: number): number {
   return 0.35;
 }
 
-function levelGlowId(level: number): string {
-  if (level >= 10) return 'url(#glow-gold)';
-  if (level >= 5)  return 'url(#glow-purple)';
+function levelGlowId(level: number, suffix = ''): string {
+  if (level >= 10) return `url(#glow-gold${suffix})`;
+  if (level >= 5)  return `url(#glow-purple${suffix})`;
   return 'none';
 }
 
-// Static body silhouette — same SVG shapes for both front/back
 function BodySilhouette() {
   const fill = '#0f1e36';
   const stroke = '#1e3055';
@@ -121,9 +117,27 @@ function BodySilhouette() {
   );
 }
 
+function SvgDefs({ suffix }: { suffix: string }) {
+  return (
+    <defs>
+      <filter id={`glow-gold${suffix}`} x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur stdDeviation="3" result="blur" />
+        <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+      </filter>
+      <filter id={`glow-purple${suffix}`} x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur stdDeviation="2.5" result="blur" />
+        <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+      </filter>
+      <filter id={`glow-hover${suffix}`} x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur stdDeviation="4" result="blur" />
+        <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+      </filter>
+    </defs>
+  );
+}
+
 export function BodyMap() {
   const { muscles } = useGameStore();
-  const [flipped, setFlipped] = useState(false);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -134,11 +148,7 @@ export function BodyMap() {
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
     setHoveredId(muscleId);
-    setTooltip({
-      muscleId,
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
-    });
+    setTooltip({ muscleId, x: e.clientX - rect.left, y: e.clientY - rect.top });
   }
 
   function handleMouseMove(e: React.MouseEvent) {
@@ -153,7 +163,11 @@ export function BodyMap() {
     setTooltip(null);
   }
 
-  function renderRegions(regions: Region[], labels: Record<string, { x: number; y: number }>) {
+  function renderRegions(
+    regions: Region[],
+    labels: Record<string, { x: number; y: number }>,
+    suffix: string
+  ) {
     const drawnLabels = new Set<string>();
     return regions.map((r, i) => {
       const muscle = muscleMap[r.muscleId];
@@ -161,14 +175,14 @@ export function BodyMap() {
       const isHovered = hoveredId === r.muscleId;
       const fill = levelFill(level);
       const opacity = isHovered ? Math.min(1, levelOpacity(level) + 0.15) : levelOpacity(level);
-      const filter = isHovered ? 'url(#glow-hover)' : levelGlowId(level);
+      const filter = isHovered ? `url(#glow-hover${suffix})` : levelGlowId(level, suffix);
 
       const showLabel = labels[r.muscleId] && !drawnLabels.has(r.muscleId);
       if (showLabel) drawnLabels.add(r.muscleId);
       const lp = labels[r.muscleId];
 
       return (
-        <g key={`${r.muscleId}-${i}`}>
+        <g key={`${r.muscleId}-${suffix}-${i}`}>
           <ellipse
             cx={r.cx} cy={r.cy} rx={r.rx} ry={r.ry}
             fill={fill} opacity={opacity} filter={filter}
@@ -178,9 +192,7 @@ export function BodyMap() {
             onMouseLeave={handleMouseLeave}
           />
           {showLabel && lp && (
-            <g
-              style={{ cursor: 'pointer', pointerEvents: 'none' }}
-            >
+            <g style={{ pointerEvents: 'none' }}>
               <circle cx={lp.x} cy={lp.y} r="9"
                 fill="#060913" stroke={fill} strokeWidth="1.5" opacity={0.95} />
               <text x={lp.x} y={lp.y + 4}
@@ -201,99 +213,53 @@ export function BodyMap() {
   return (
     <div ref={containerRef} style={{ position: 'relative', userSelect: 'none' }}>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-        <div>
-          <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#e2e8f0' }}>
-            🫀 Mapa Muscular
-          </h3>
-          <p style={{ margin: '2px 0 0', fontSize: 11, color: '#64748b' }}>
-            {flipped ? 'Vista posterior' : 'Vista frontal'} — passe o mouse para ver detalhes
-          </p>
-        </div>
-        <button
-          className="btn-secondary"
-          style={{ gap: 6, fontSize: 13, padding: '8px 14px' }}
-          onClick={() => setFlipped(f => !f)}
-        >
-          <RotateCcw size={14} style={{
-            transition: 'transform 0.4s',
-            transform: flipped ? 'rotate(180deg)' : 'rotate(0deg)',
-          }} />
-          {flipped ? 'Ver Frente' : 'Ver Costas'}
-        </button>
+      <div style={{ marginBottom: 16 }}>
+        <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#e2e8f0' }}>
+          🫀 Mapa Muscular
+        </h3>
+        <p style={{ margin: '2px 0 0', fontSize: 11, color: '#64748b' }}>
+          Passe o mouse sobre um músculo para ver detalhes
+        </p>
       </div>
 
-      {/* 3D flip container */}
-      <div style={{ perspective: '900px', width: '100%' }}>
-        <div style={{
-          transformStyle: 'preserve-3d',
-          transition: 'transform 0.7s cubic-bezier(0.4, 0, 0.2, 1)',
-          transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
-          position: 'relative',
-          height: 420,
-        }}>
-          {/* FRONT */}
-          <div style={{
-            backfaceVisibility: 'hidden',
-            WebkitBackfaceVisibility: 'hidden',
-            position: 'absolute', inset: 0,
-            display: 'flex', justifyContent: 'center',
-          }}>
-            <svg viewBox="0 0 200 410" width="200" height="410" style={{ overflow: 'visible' }}>
-              <defs>
-                <filter id="glow-gold" x="-50%" y="-50%" width="200%" height="200%">
-                  <feGaussianBlur stdDeviation="3" result="blur" />
-                  <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-                </filter>
-                <filter id="glow-purple" x="-50%" y="-50%" width="200%" height="200%">
-                  <feGaussianBlur stdDeviation="2.5" result="blur" />
-                  <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-                </filter>
-                <filter id="glow-hover" x="-50%" y="-50%" width="200%" height="200%">
-                  <feGaussianBlur stdDeviation="4" result="blur" />
-                  <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-                </filter>
-              </defs>
-              <BodySilhouette />
-              {renderRegions(FRONT_REGIONS, FRONT_LABEL)}
-            </svg>
-          </div>
+      {/* Side-by-side views */}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 32, flexWrap: 'wrap' }}>
+        {/* Front */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: '#475569', textTransform: 'uppercase' }}>
+            Frente
+          </span>
+          <svg viewBox="0 0 200 410" width="180" height="369" style={{ overflow: 'visible', display: 'block' }}>
+            <SvgDefs suffix="-front" />
+            <BodySilhouette />
+            {renderRegions(FRONT_REGIONS, FRONT_LABEL, '-front')}
+          </svg>
+        </div>
 
-          {/* BACK */}
-          <div style={{
-            backfaceVisibility: 'hidden',
-            WebkitBackfaceVisibility: 'hidden',
-            position: 'absolute', inset: 0,
-            transform: 'rotateY(180deg)',
-            display: 'flex', justifyContent: 'center',
-          }}>
-            <svg viewBox="0 0 200 410" width="200" height="410" style={{ overflow: 'visible' }}>
-              <defs>
-                <filter id="glow-gold-b" x="-50%" y="-50%" width="200%" height="200%">
-                  <feGaussianBlur stdDeviation="3" result="blur" />
-                  <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-                </filter>
-                <filter id="glow-purple-b" x="-50%" y="-50%" width="200%" height="200%">
-                  <feGaussianBlur stdDeviation="2.5" result="blur" />
-                  <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-                </filter>
-                <filter id="glow-hover-b" x="-50%" y="-50%" width="200%" height="200%">
-                  <feGaussianBlur stdDeviation="4" result="blur" />
-                  <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-                </filter>
-              </defs>
-              <BodySilhouette />
-              {renderRegions(BACK_REGIONS, BACK_LABEL)}
-            </svg>
-          </div>
+        {/* Divider */}
+        <div style={{
+          width: 1, background: '#1e2d4a', alignSelf: 'stretch', flexShrink: 0,
+          display: 'flex', alignItems: 'center',
+        }} />
+
+        {/* Back */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: '#475569', textTransform: 'uppercase' }}>
+            Costas
+          </span>
+          <svg viewBox="0 0 200 410" width="180" height="369" style={{ overflow: 'visible', display: 'block' }}>
+            <SvgDefs suffix="-back" />
+            <BodySilhouette />
+            {renderRegions(BACK_REGIONS, BACK_LABEL, '-back')}
+          </svg>
         </div>
       </div>
 
       {/* Level legend */}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12, justifyContent: 'center' }}>
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 14, justifyContent: 'center' }}>
         {[
-          { label: 'Lv 1', color: '#1a2d50' },
-          { label: 'Lv 2', color: '#1e40af' },
+          { label: 'Lv 1',   color: '#1a2d50' },
+          { label: 'Lv 2',   color: '#1e40af' },
           { label: 'Lv 3-4', color: '#3b82f6' },
           { label: 'Lv 5-6', color: '#7c3aed' },
           { label: 'Lv 7-9', color: '#a855f7' },
