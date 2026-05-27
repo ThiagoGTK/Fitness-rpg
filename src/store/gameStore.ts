@@ -86,8 +86,10 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       supabase.from('user_achievements').select('*').eq('user_id', userId),
     ]);
 
-    // Surface any DB errors in the console so they're easy to diagnose
-    if (profileRes.error)  console.error('[initData] profiles error:',         profileRes.error);
+    // Surface any DB errors in the console so they're easy to diagnose.
+    // PGRST116 = no rows found — expected for new users who haven't set up yet.
+    if (profileRes.error && profileRes.error.code !== 'PGRST116')
+      console.error('[initData] profiles error:', profileRes.error);
     if (muscleRes.error)   console.error('[initData] muscle_progress error:',   muscleRes.error);
     if (exerciseRes.error) console.error('[initData] exercises error:',         exerciseRes.error);
     if (sessionRes.error)  console.error('[initData] workout_sessions error:',  sessionRes.error);
@@ -199,15 +201,28 @@ export const useGameStore = create<GameStore>()((set, get) => ({
     });
   },
 
-  // ─── Update profile (birth date / sex) ─────────────────────────────────────
+  // ─── Update profile (birth date / sex / name) ──────────────────────────────
   updateProfile: async (data) => {
     const { data: { user: authUser } } = await supabase.auth.getUser();
     if (!authUser) return;
 
-    // Use upsert so the row is created if it somehow doesn't exist yet.
-    // onConflict:'id' → UPDATE when row exists, INSERT when it doesn't.
-    // Only the supplied fields change; name/joined_at/level/etc. are untouched.
-    const upsertPayload: Record<string, unknown> = { id: authUser.id };
+    const u = get().user; // current in-memory state (used as fallback for INSERT)
+
+    // Always include all non-nullable columns so that if the profile row doesn't
+    // exist yet (new user, no DB trigger), the INSERT doesn't fail with a
+    // NOT NULL constraint violation.
+    const upsertPayload: Record<string, unknown> = {
+      id:             authUser.id,
+      name:           u.name           ?? '',
+      level:          u.level          ?? 1,
+      total_xp:       u.totalXP        ?? 0,
+      weekly_xp:      u.weeklyXP       ?? 0,
+      streak:         u.streak         ?? 0,
+      longest_streak: u.longestStreak  ?? 0,
+      joined_at:      u.joinedAt       ?? new Date().toISOString(),
+    };
+
+    // Override with the fields that are actually being changed
     if (data.birthDate !== undefined) upsertPayload.birth_date = data.birthDate;
     if (data.sex       !== undefined) upsertPayload.sex        = data.sex;
     if (data.name      !== undefined) upsertPayload.name       = data.name;
