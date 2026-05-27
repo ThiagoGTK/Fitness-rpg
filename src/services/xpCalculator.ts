@@ -77,9 +77,9 @@ export function calculateEntryXP(
 
   const exerciseXP = Math.floor(baseXP * diffMult) + prBonus;
 
-  // Distribute to muscles
+  // Distribute to muscles (primaryMuscleId may be empty for cardio exercises)
   const muscleXPMap: Record<string, number> = {};
-  muscleXPMap[exercise.primaryMuscleId] = exerciseXP;
+  if (exercise.primaryMuscleId) muscleXPMap[exercise.primaryMuscleId] = exerciseXP;
   for (const sm of exercise.secondaryMuscles) {
     muscleXPMap[sm.muscleId] = Math.floor(exerciseXP * sm.xpPercentage / 100);
   }

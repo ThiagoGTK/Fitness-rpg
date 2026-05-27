@@ -54,8 +54,8 @@ function EntryCard({ entry, index, exercises, muscles, onUpdate, onRemove, prevS
   const [createError, setCreateError]   = useState('');
 
   async function handleCreateExercise() {
-    if (!newName.trim())  { setCreateError('Informe o nome do exercício'); return; }
-    if (!newMuscleId)     { setCreateError('Selecione o músculo principal'); return; }
+    if (!newName.trim())                        { setCreateError('Informe o nome do exercício'); return; }
+    if (newType !== 'cardio' && !newMuscleId)   { setCreateError('Selecione o músculo principal'); return; }
     setCreating(true);
     setCreateError('');
     const newId = await addExercise({
@@ -157,17 +157,23 @@ function EntryCard({ entry, index, exercises, muscles, onUpdate, onRemove, prevS
                     onChange={e => { setNewName(e.target.value); setCreateError(''); }}
                   />
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                    <select className="game-input" value={newMuscleId}
-                      onChange={e => { setNewMuscleId(e.target.value); setCreateError(''); }}>
-                      <option value="">Músculo principal *</option>
-                      {muscles.map(m => (
-                        <option key={m.id} value={m.id}>{m.icon} {m.name}</option>
-                      ))}
-                    </select>
+                  <div style={{ display: 'grid', gridTemplateColumns: newType === 'cardio' ? '1fr' : '1fr 1fr', gap: 8 }}>
+                    {newType !== 'cardio' && (
+                      <select className="game-input" value={newMuscleId}
+                        onChange={e => { setNewMuscleId(e.target.value); setCreateError(''); }}>
+                        <option value="">Músculo principal *</option>
+                        {muscles.map(m => (
+                          <option key={m.id} value={m.id}>{m.icon} {m.name}</option>
+                        ))}
+                      </select>
+                    )}
 
                     <select className="game-input" value={newType}
-                      onChange={e => setNewType(e.target.value as ExerciseType)}>
+                      onChange={e => {
+                        const t = e.target.value as ExerciseType;
+                        setNewType(t);
+                        if (t === 'cardio') setNewMuscleId('');
+                      }}>
                       {Object.entries(EXERCISE_TYPE_LABELS).map(([k, v]) => (
                         <option key={k} value={k}>{v}</option>
                       ))}
