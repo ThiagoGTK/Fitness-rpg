@@ -384,10 +384,37 @@ export function WorkoutLogPage() {
       {/* Date + notes */}
       <div className="game-card" style={{ padding: '16px', marginBottom: 16 }}>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <div style={{ flex: 1, minWidth: 140 }}>
-            <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 5 }}>Data do treino</label>
-            <input className="game-input" type="date" value={date} onChange={e => setDate(e.target.value)} style={{ colorScheme: 'only light' }} />
+
+          {/* Date: quick-select buttons + native input for custom dates */}
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 6 }}>📅 Data do treino</label>
+            {/* Quick-select row — avoids opening the native dark calendar */}
+            <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+              {([
+                { label: 'Hoje',       days: 0 },
+                { label: 'Ontem',      days: 1 },
+                { label: 'Anteontem',  days: 2 },
+              ] as { label: string; days: number }[]).map(({ label, days }) => {
+                const d = new Date(); d.setDate(d.getDate() - days);
+                const val = d.toISOString().slice(0, 10);
+                const active = date === val;
+                return (
+                  <button key={label} type="button" onClick={() => setDate(val)} style={{
+                    flex: 1, padding: '6px 4px', borderRadius: 8, fontSize: 12, cursor: 'pointer',
+                    border: `1px solid ${active ? '#7c3aed' : '#1e2d4a'}`,
+                    background: active ? '#7c3aed20' : '#0d1526',
+                    color: active ? '#a855f7' : '#64748b',
+                    fontWeight: active ? 700 : 400,
+                    transition: 'all 0.15s',
+                  }}>{label}</button>
+                );
+              })}
+            </div>
+            {/* Native input for any other date */}
+            <input className="game-input" type="date" value={date} max={today}
+              onChange={e => setDate(e.target.value)} style={{ colorScheme: 'only light', fontSize: 13 }} />
           </div>
+
           <div style={{ flex: 2, minWidth: 200 }}>
             <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 5 }}>Observações da sessão</label>
             <input className="game-input" placeholder="Ex: Treino de peito intenso" value={notes} onChange={e => setNotes(e.target.value)} />
