@@ -120,7 +120,7 @@ export function ProfileSetupPage() {
               value={birthDate}
               min={minDate}
               max={maxDate}
-              style={{ width: '100%', boxSizing: 'border-box', colorScheme: 'light' }}
+              style={{ width: '100%', boxSizing: 'border-box', colorScheme: 'only light' }}
               onChange={e => { setBirthDate(e.target.value); setError(''); }}
             />
             {age !== null && age >= 10 && (

@@ -99,12 +99,13 @@ body {
 }
 .game-input::placeholder { color: #64748b; }
 select.game-input option { background: #111827; }
-/* Native date/time picker popup forced to light mode on all browsers */
+/* Native date/time picker popup forced to light mode on all browsers.
+   "only light" prevents OS dark-mode from overriding it. */
 input[type="date"],
 input[type="datetime-local"],
 input[type="month"],
 input[type="time"] {
-  color-scheme: light;
+  color-scheme: only light;
 }
 
 .btn-primary {
