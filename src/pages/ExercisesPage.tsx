@@ -249,6 +249,12 @@ export function ExercisesPage() {
                       padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600,
                       background: `${color}20`, color,
                     }}>{EXERCISE_TYPE_LABELS[ex.type]}</span>
+                    {filterMuscle && ex.primaryMuscleId !== filterMuscle && (
+                      <span style={{
+                        padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600,
+                        background: '#f9731615', color: '#f97316', border: '1px solid #f9731635',
+                      }}>⚡ secundário</span>
+                    )}
                   </div>
                 </div>
                 <LevelBadge level={ex.level} size="sm" />
@@ -267,9 +273,16 @@ export function ExercisesPage() {
                   {ex.secondaryMuscles.map(sm => {
                     const sm_m = getMuscle(sm.muscleId);
                     if (!sm_m) return null;
+                    const isMatch = !!filterMuscle && sm.muscleId === filterMuscle;
                     return (
-                      <span key={sm.muscleId} style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: '#0d1526', color: '#64748b', border: '1px solid #1e2d4a' }}>
-                        {sm_m.name} {sm.xpPercentage}%
+                      <span key={sm.muscleId} style={{
+                        fontSize: 10, padding: '2px 6px', borderRadius: 4,
+                        background: isMatch ? '#f9731620' : '#0d1526',
+                        color: isMatch ? '#f97316' : '#64748b',
+                        border: `1px solid ${isMatch ? '#f9731650' : '#1e2d4a'}`,
+                        fontWeight: isMatch ? 700 : 400,
+                      }}>
+                        {isMatch ? '⚡ ' : ''}{sm_m.name} {sm.xpPercentage}%
                       </span>
                     );
                   })}
