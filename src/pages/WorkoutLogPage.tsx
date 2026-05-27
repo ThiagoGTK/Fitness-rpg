@@ -310,7 +310,11 @@ export function WorkoutLogPage() {
 
   const totalXPPreview = entries.reduce((sum, entry) => {
     const ex = exercises.find(e => e.id === entry.exerciseId);
-    if (!ex || entry.sets.length === 0) return sum;
+    if (!ex) return sum;
+    const isCardio = ex.primaryMuscleId === 'cardio';
+    // Cardio: include if has duration or sets; others: need at least one set
+    if (!isCardio && entry.sets.length === 0) return sum;
+    if (isCardio && entry.sets.length === 0 && !entry.duration) return sum;
     return sum + calculateEntryXP(entry, ex, workouts).exerciseXP;
   }, 0);
 

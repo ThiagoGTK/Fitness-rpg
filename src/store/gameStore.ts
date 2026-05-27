@@ -374,8 +374,9 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       );
     }
 
-    // 6. Update profile
-    const { error: profileErr } = await supabase.from('profiles').update({
+    // 6. Upsert profile (handles edge case where profile row was never created)
+    const { error: profileErr } = await supabase.from('profiles').upsert({
+      id: userId,
       level: calculateUserLevel(newTotalXP),
       total_xp: newTotalXP,
       weekly_xp: weeklyXP,
@@ -383,8 +384,8 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       longest_streak: Math.max(u.longestStreak, newStreak),
       last_trained_date: date,
       updated_at: new Date().toISOString(),
-    }).eq('id', userId);
-    if (profileErr) console.error('[addWorkout] update profiles failed:', profileErr);
+    }, { onConflict: 'id' });
+    if (profileErr) console.error('[addWorkout] upsert profiles failed:', profileErr);
 
     // 7. Achievements
     const session: WorkoutSession = {
