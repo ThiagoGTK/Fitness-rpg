@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore';
 import { useGameStore } from '../store/gameStore';
 import { Navigation } from './Navigation';
 import { LevelUpModal } from './ui/LevelUpModal';
+import { ProfileSetupPage } from '../pages/ProfileSetupPage';
 
 function LoadingScreen() {
   return (
@@ -36,26 +37,29 @@ function LoadingScreen() {
 }
 
 export function AuthGuard() {
-  const { user, loading: authLoading, initialized: authInitialized } = useAuthStore();
-  const { initialized: gameInitialized, loading: gameLoading, initData } = useGameStore();
+  const { user: authUser, loading: authLoading, initialized: authInitialized } = useAuthStore();
+  const { initialized: gameInitialized, loading: gameLoading, initData, user: gameUser } = useGameStore();
 
   // Load game data when a user is authenticated
   useEffect(() => {
-    if (user && !gameInitialized && !gameLoading) {
-      initData(user.id);
+    if (authUser && !gameInitialized && !gameLoading) {
+      initData(authUser.id);
     }
-  }, [user, gameInitialized, gameLoading]);
+  }, [authUser, gameInitialized, gameLoading]);
 
   // 1. Still establishing session
   if (!authInitialized || authLoading) return <LoadingScreen />;
 
   // 2. No session → go to login
-  if (!user) return <Navigate to="/login" replace />;
+  if (!authUser) return <Navigate to="/login" replace />;
 
   // 3. Game data loading
   if (!gameInitialized || gameLoading) return <LoadingScreen />;
 
-  // 4. All good — render app shell
+  // 4. Profile incomplete → onboarding (birth date + sex)
+  if (!gameUser.birthDate || !gameUser.sex) return <ProfileSetupPage />;
+
+  // 5. All good — render app shell
   return (
     <div className="app-layout" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Navigation />

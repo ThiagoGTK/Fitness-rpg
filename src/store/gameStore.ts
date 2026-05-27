@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type {
   MuscleGroup, Exercise, WorkoutSession,
-  WorkoutSessionInput, Achievement, PersonalRecord, LevelUpEvent, UserProfile,
+  WorkoutSessionInput, Achievement, PersonalRecord, LevelUpEvent, UserProfile, Sex,
 } from '../types';
 import { SEED_MUSCLES, SEED_EXERCISES } from '../data/seedData';
 import { calculateEntryXP, calcVolume, calcMaxWeight } from '../services/xpCalculator';
@@ -53,6 +53,7 @@ interface GameStore {
 
   initData: (userId: string) => Promise<void>;
   clearData: () => void;
+  updateProfile: (data: { birthDate?: string; sex?: Sex }) => Promise<void>;
   addWorkout: (input: WorkoutSessionInput) => Promise<void>;
   addExercise: (data: Omit<Exercise, 'id' | 'level' | 'currentXP' | 'totalXPEarned' | 'timesPerformed' | 'createdAt'>) => Promise<void>;
   updateExercise: (id: string, data: Partial<Pick<Exercise, 'name' | 'primaryMuscleId' | 'secondaryMuscles' | 'type' | 'notes'>>) => Promise<void>;
@@ -168,6 +169,8 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       streak: (p.streak as number) ?? 0,
       longestStreak: (p.longest_streak as number) ?? 0,
       lastTrainedDate: (p.last_trained_date as string | null) ?? undefined,
+      birthDate: (p.birth_date as string | null) ?? undefined,
+      sex: (p.sex as Sex | null) ?? undefined,
     } : { ...DEFAULT_USER };
 
     set({ muscles, exercises, workouts, achievements, personalRecords, user, loading: false, initialized: true });
@@ -186,6 +189,20 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       loading: false,
       initialized: false,
     });
+  },
+
+  // ─── Update profile (birth date / sex) ─────────────────────────────────────
+  updateProfile: async (data) => {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) return;
+
+    const updates: Record<string, unknown> = {};
+    if (data.birthDate !== undefined) updates.birth_date = data.birthDate;
+    if (data.sex      !== undefined) updates.sex        = data.sex;
+    updates.updated_at = new Date().toISOString();
+
+    await supabase.from('profiles').update(updates).eq('id', authUser.id);
+    set(s => ({ user: { ...s.user, ...data } }));
   },
 
   // ─── Add workout ────────────────────────────────────────────────────────────

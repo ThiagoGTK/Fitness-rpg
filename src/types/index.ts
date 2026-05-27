@@ -88,6 +88,8 @@ export interface LevelUpEvent {
   newLevel: number;
 }
 
+export type Sex = 'male' | 'female' | 'other';
+
 export interface UserProfile {
   name: string;
   level: number;
@@ -97,6 +99,8 @@ export interface UserProfile {
   longestStreak: number;
   lastTrainedDate?: string;
   joinedAt: string;
+  birthDate?: string; // YYYY-MM-DD
+  sex?: Sex;
 }
 
 export const EXERCISE_TYPE_LABELS: Record<ExerciseType, string> = {
