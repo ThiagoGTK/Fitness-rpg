@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../store/gameStore';
-import type { WorkoutSet, WorkoutEntryInput, Exercise, MuscleGroup, WorkoutSession } from '../types';
+import type { WorkoutSet, WorkoutEntryInput, Exercise, MuscleGroup, WorkoutSession, ExerciseType } from '../types';
+import { EXERCISE_TYPE_LABELS } from '../types';
 import { Plus, Trash2, ChevronDown, ChevronUp, Zap, CheckCircle, X } from 'lucide-react';
 import { calculateEntryXP, calcVolume } from '../services/xpCalculator';
 
@@ -44,6 +45,38 @@ function EntryCard({ entry, index, exercises, muscles, onUpdate, onRemove, prevS
   onUpdate: (e: EntryDraft) => void; onRemove: () => void;
   prevSessions: WorkoutSession[];
 }) {
+  const { addExercise } = useGameStore();
+  const [isCreating, setIsCreating]     = useState(false);
+  const [newName, setNewName]           = useState('');
+  const [newMuscleId, setNewMuscleId]   = useState('');
+  const [newType, setNewType]           = useState<ExerciseType>('strength');
+  const [creating, setCreating]         = useState(false);
+  const [createError, setCreateError]   = useState('');
+
+  async function handleCreateExercise() {
+    if (!newName.trim())  { setCreateError('Informe o nome do exercício'); return; }
+    if (!newMuscleId)     { setCreateError('Selecione o músculo principal'); return; }
+    setCreating(true);
+    setCreateError('');
+    const newId = await addExercise({
+      name: newName.trim(),
+      primaryMuscleId: newMuscleId,
+      secondaryMuscles: [],
+      type: newType,
+      notes: '',
+    });
+    if (newId) {
+      onUpdate({ ...entry, exerciseId: newId });
+      setIsCreating(false);
+      setNewName('');
+      setNewMuscleId('');
+      setNewType('strength');
+    } else {
+      setCreateError('Erro ao criar exercício. Tente novamente.');
+    }
+    setCreating(false);
+  }
+
   const exercise = exercises.find(e => e.id === entry.exerciseId);
   const primaryMuscle = exercise ? muscles.find(m => m.id === exercise.primaryMuscleId) : null;
   const volume = calcVolume(entry.sets);
@@ -62,7 +95,8 @@ function EntryCard({ entry, index, exercises, muscles, onUpdate, onRemove, prevS
           </span>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9' }}>
-              {exercise ? exercise.name : `Exercício ${index + 1}`}
+              {isCreating ? <span style={{ color: '#10b981' }}>✨ {newName || 'Novo exercício...'}</span>
+                : exercise ? exercise.name : `Exercício ${index + 1}`}
             </div>
             <div style={{ fontSize: 11, color: '#64748b' }}>
               {entry.sets.length} série{entry.sets.length !== 1 ? 's' : ''}
@@ -81,13 +115,79 @@ function EntryCard({ entry, index, exercises, muscles, onUpdate, onRemove, prevS
           {/* Exercise picker */}
           <div style={{ marginBottom: 12 }}>
             <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 5 }}>Exercício</label>
-            <select className="game-input" value={entry.exerciseId} onChange={e => onUpdate({ ...entry, exerciseId: e.target.value })}>
-              <option value="">Selecione...</option>
-              {exercises.map(ex => {
-                const m = muscles.find(mm => mm.id === ex.primaryMuscleId);
-                return <option key={ex.id} value={ex.id}>{m?.icon} {ex.name} (Lv {ex.level})</option>;
-              })}
-            </select>
+
+            {!isCreating ? (
+              <select className="game-input" value={entry.exerciseId}
+                onChange={e => {
+                  if (e.target.value === '__new__') { setIsCreating(true); }
+                  else { onUpdate({ ...entry, exerciseId: e.target.value }); }
+                }}>
+                <option value="">Selecione...</option>
+                {exercises.map(ex => {
+                  const m = muscles.find(mm => mm.id === ex.primaryMuscleId);
+                  return <option key={ex.id} value={ex.id}>{m?.icon} {ex.name} (Lv {ex.level})</option>;
+                })}
+                <option disabled value="">──────────────</option>
+                <option value="__new__">➕ Criar novo exercício...</option>
+              </select>
+            ) : (
+              /* ── Inline quick-create form ── */
+              <div style={{
+                background: '#071a0d', border: '1px solid #10b98140',
+                borderRadius: 10, padding: 14,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#10b981' }}>✨ Criar novo exercício</span>
+                  <button className="btn-ghost" style={{ padding: '3px 6px', fontSize: 11 }}
+                    onClick={() => { setIsCreating(false); setCreateError(''); setNewName(''); setNewMuscleId(''); }}>
+                    <X size={12} /> Cancelar
+                  </button>
+                </div>
+
+                {createError && (
+                  <div style={{ fontSize: 12, color: '#ef4444', marginBottom: 8 }}>{createError}</div>
+                )}
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <input
+                    className="game-input"
+                    placeholder="Nome do exercício *"
+                    value={newName}
+                    autoFocus
+                    onChange={e => { setNewName(e.target.value); setCreateError(''); }}
+                  />
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    <select className="game-input" value={newMuscleId}
+                      onChange={e => { setNewMuscleId(e.target.value); setCreateError(''); }}>
+                      <option value="">Músculo principal *</option>
+                      {muscles.map(m => (
+                        <option key={m.id} value={m.id}>{m.icon} {m.name}</option>
+                      ))}
+                    </select>
+
+                    <select className="game-input" value={newType}
+                      onChange={e => setNewType(e.target.value as ExerciseType)}>
+                      {Object.entries(EXERCISE_TYPE_LABELS).map(([k, v]) => (
+                        <option key={k} value={k}>{v}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <button
+                    className="btn-primary"
+                    style={{ justifyContent: 'center', fontSize: 13, padding: '9px 14px', opacity: creating ? 0.7 : 1 }}
+                    onClick={handleCreateExercise}
+                    disabled={creating}
+                  >
+                    {creating
+                      ? <><span style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid #ffffff60', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> Salvando...</>
+                      : '✓ Criar e Adicionar ao Treino'
+                    }
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Sets */}

@@ -55,7 +55,7 @@ interface GameStore {
   clearData: () => void;
   updateProfile: (data: { birthDate?: string; sex?: Sex }) => Promise<void>;
   addWorkout: (input: WorkoutSessionInput) => Promise<void>;
-  addExercise: (data: Omit<Exercise, 'id' | 'level' | 'currentXP' | 'totalXPEarned' | 'timesPerformed' | 'createdAt'>) => Promise<void>;
+  addExercise: (data: Omit<Exercise, 'id' | 'level' | 'currentXP' | 'totalXPEarned' | 'timesPerformed' | 'createdAt'>) => Promise<string | null>;
   updateExercise: (id: string, data: Partial<Pick<Exercise, 'name' | 'primaryMuscleId' | 'secondaryMuscles' | 'type' | 'notes'>>) => Promise<void>;
   deleteExercise: (id: string) => Promise<void>;
   dismissLevelUp: (id: string) => void;
@@ -416,7 +416,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
   // ─── Add exercise ───────────────────────────────────────────────────────────
   addExercise: async (data) => {
     const { data: { user: authUser } } = await supabase.auth.getUser();
-    if (!authUser) return;
+    if (!authUser) return null;
 
     const { data: row } = await supabase.from('exercises').insert({
       user_id: authUser.id,
@@ -428,7 +428,12 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       level: 1, current_xp: 0, total_xp_earned: 0, times_performed: 0,
     }).select().single();
 
-    if (row) set(s => ({ exercises: [...s.exercises, mapExercise(row as Record<string, unknown>)] }));
+    if (row) {
+      const newEx = mapExercise(row as Record<string, unknown>);
+      set(s => ({ exercises: [...s.exercises, newEx] }));
+      return newEx.id;
+    }
+    return null;
   },
 
   // ─── Update exercise ────────────────────────────────────────────────────────
