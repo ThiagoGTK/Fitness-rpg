@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Outlet, Navigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useGameStore } from '../store/gameStore';
@@ -38,11 +38,29 @@ function LoadingScreen() {
 
 export function AuthGuard() {
   const { user: authUser, loading: authLoading, initialized: authInitialized } = useAuthStore();
-  const { initialized: gameInitialized, loading: gameLoading, initData, user: gameUser } = useGameStore();
+  const { initialized: gameInitialized, loading: gameLoading, initData, clearData, user: gameUser } = useGameStore();
 
-  // Load game data when a user is authenticated
+  // Track which user's data is currently loaded
+  const loadedUserId = useRef<string | null>(null);
+
   useEffect(() => {
-    if (authUser && !gameInitialized && !gameLoading) {
+    // 1. User logged out → wipe game state
+    if (!authUser) {
+      if (gameInitialized) clearData();
+      loadedUserId.current = null;
+      return;
+    }
+
+    // 2. User ID changed (different account logged in) → wipe first, re-init next render
+    if (loadedUserId.current !== null && loadedUserId.current !== authUser.id) {
+      clearData();                 // sets initialized = false → triggers another render
+      loadedUserId.current = null;
+      return;
+    }
+
+    // 3. Same user (or first login), data not yet loaded → fetch from DB
+    if (!gameInitialized && !gameLoading) {
+      loadedUserId.current = authUser.id;
       initData(authUser.id);
     }
   }, [authUser, gameInitialized, gameLoading]);

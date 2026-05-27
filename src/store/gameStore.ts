@@ -86,6 +86,14 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       supabase.from('user_achievements').select('*').eq('user_id', userId),
     ]);
 
+    // Surface any DB errors in the console so they're easy to diagnose
+    if (profileRes.error)  console.error('[initData] profiles error:',         profileRes.error);
+    if (muscleRes.error)   console.error('[initData] muscle_progress error:',   muscleRes.error);
+    if (exerciseRes.error) console.error('[initData] exercises error:',         exerciseRes.error);
+    if (sessionRes.error)  console.error('[initData] workout_sessions error:',  sessionRes.error);
+    if (recordRes.error)   console.error('[initData] personal_records error:',  recordRes.error);
+    if (achRes.error)      console.error('[initData] user_achievements error:', achRes.error);
+
     // Muscles: merge static defs with DB progress
     const muscleRows = muscleRes.data ?? [];
     const muscles: MuscleGroup[] = MUSCLE_DEFS.map(def => {
@@ -293,16 +301,17 @@ export const useGameStore = create<GameStore>()((set, get) => ({
 
     // ── Write to Supabase ──
     // 1. Insert session
-    const { data: sessionRow } = await supabase
+    const { data: sessionRow, error: sessionErr } = await supabase
       .from('workout_sessions')
       .insert({ user_id: userId, date, total_xp: totalXP, notes: input.notes ?? '' })
       .select()
       .single();
 
+    if (sessionErr) console.error('[addWorkout] insert workout_sessions failed:', sessionErr);
     if (!sessionRow) return;
 
     // 2. Insert entries
-    await supabase.from('workout_entries').insert(
+    const { error: entriesErr } = await supabase.from('workout_entries').insert(
       entryResults.map(e => ({
         session_id: sessionRow.id,
         user_id: userId,
@@ -317,6 +326,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         is_pr: e.isPR,
       }))
     );
+    if (entriesErr) console.error('[addWorkout] insert workout_entries failed:', entriesErr);
 
     // 3. Update exercises (only changed ones)
     await Promise.all(
@@ -365,7 +375,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
     }
 
     // 6. Update profile
-    await supabase.from('profiles').update({
+    const { error: profileErr } = await supabase.from('profiles').update({
       level: calculateUserLevel(newTotalXP),
       total_xp: newTotalXP,
       weekly_xp: weeklyXP,
@@ -374,6 +384,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       last_trained_date: date,
       updated_at: new Date().toISOString(),
     }).eq('id', userId);
+    if (profileErr) console.error('[addWorkout] update profiles failed:', profileErr);
 
     // 7. Achievements
     const session: WorkoutSession = {
