@@ -55,7 +55,7 @@ function EntryCard({ entry, index, exercises, muscles, onUpdate, onRemove, prevS
 
   async function handleCreateExercise() {
     if (!newName.trim())                        { setCreateError('Informe o nome do exercício'); return; }
-    if (newType !== 'cardio' && !newMuscleId)   { setCreateError('Selecione o músculo principal'); return; }
+    if (!newMuscleId)   { setCreateError('Selecione o músculo principal'); return; }
     setCreating(true);
     setCreateError('');
     const newId = await addExercise({
@@ -172,7 +172,9 @@ function EntryCard({ entry, index, exercises, muscles, onUpdate, onRemove, prevS
                       onChange={e => {
                         const t = e.target.value as ExerciseType;
                         setNewType(t);
-                        if (t === 'cardio') setNewMuscleId('');
+                        // cardio usa categoria própria; ao sair do cardio, limpa
+                        if (t === 'cardio') setNewMuscleId('cardio');
+                        else if (newMuscleId === 'cardio') setNewMuscleId('');
                       }}>
                       {Object.entries(EXERCISE_TYPE_LABELS).map(([k, v]) => (
                         <option key={k} value={k}>{v}</option>

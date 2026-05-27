@@ -50,7 +50,7 @@ function ExerciseModal({ exercise, onClose }: { exercise?: Exercise; onClose: ()
 
   async function handleSubmit() {
     if (!form.name.trim()) { setError('Nome é obrigatório'); return; }
-    if (form.type !== 'cardio' && !form.primaryMuscleId) { setError('Músculo principal é obrigatório'); return; }
+    if (!form.primaryMuscleId) { setError('Músculo principal é obrigatório'); return; }
     setSaving(true);
     const data = {
       name: form.name.trim(), primaryMuscleId: form.primaryMuscleId,
@@ -88,7 +88,7 @@ function ExerciseModal({ exercise, onClose }: { exercise?: Exercise; onClose: ()
               <label style={{ display: 'block', fontSize: 13, color: '#94a3b8', marginBottom: 6 }}>Músculo principal *</label>
               <select className="game-input" value={form.primaryMuscleId} onChange={e => setForm(f => ({ ...f, primaryMuscleId: e.target.value }))}>
                 <option value="">Selecione...</option>
-                {muscles.map(m => <option key={m.id} value={m.id}>{m.icon} {m.name}</option>)}
+                {muscles.filter(m => m.id !== 'cardio').map(m => <option key={m.id} value={m.id}>{m.icon} {m.name}</option>)}
               </select>
             </div>
           )}
@@ -98,8 +98,10 @@ function ExerciseModal({ exercise, onClose }: { exercise?: Exercise; onClose: ()
             <select className="game-input" value={form.type} onChange={e => setForm(f => ({
               ...f,
               type: e.target.value as ExerciseType,
-              // limpa músculo ao mudar para cardio
-              primaryMuscleId: e.target.value === 'cardio' ? '' : f.primaryMuscleId,
+              // cardio usa categoria própria; outros tipos limpam se tinham 'cardio'
+              primaryMuscleId: e.target.value === 'cardio'
+                ? 'cardio'
+                : f.primaryMuscleId === 'cardio' ? '' : f.primaryMuscleId,
             }))}>
               {Object.entries(EXERCISE_TYPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </select>

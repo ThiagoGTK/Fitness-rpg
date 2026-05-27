@@ -15,6 +15,7 @@ export const SEED_MUSCLES: MuscleGroup[] = [
   { id: 'lombar', name: 'Lombar', level: 1, currentXP: 30, totalXPEarned: 30, icon: '🔩', color: '#f59e0b' },
   { id: 'antebraco', name: 'Antebraço', level: 1, currentXP: 50, totalXPEarned: 50, icon: '🤜', color: '#6ee7b7' },
   { id: 'trapezio', name: 'Trapézio', level: 1, currentXP: 20, totalXPEarned: 20, icon: '🗻', color: '#94a3b8' },
+  { id: 'cardio',   name: 'Cardio',   level: 1, currentXP: 0,  totalXPEarned: 0,  icon: '❤️', color: '#ef4444' },
 ];
 
 export const SEED_EXERCISES: Exercise[] = [

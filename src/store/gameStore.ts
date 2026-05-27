@@ -332,7 +332,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         )
     );
 
-    // 4. Update muscle_progress (only changed ones)
+    // 4. Upsert muscle_progress (handles new categories like 'cardio' for existing users)
     await Promise.all(
       newMuscles
         .filter(m => {
@@ -341,8 +341,10 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         })
         .map(m =>
           supabase.from('muscle_progress')
-            .update({ level: m.level, current_xp: m.currentXP, total_xp_earned: m.totalXPEarned })
-            .eq('user_id', userId).eq('muscle_id', m.id)
+            .upsert(
+              { user_id: userId, muscle_id: m.id, level: m.level, current_xp: m.currentXP, total_xp_earned: m.totalXPEarned },
+              { onConflict: 'user_id,muscle_id' }
+            )
         )
     );
 
