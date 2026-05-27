@@ -382,7 +382,7 @@ export function WorkoutLogPage() {
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: 140 }}>
             <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 5 }}>Data do treino</label>
-            <input className="game-input" type="date" value={date} onChange={e => setDate(e.target.value)} />
+            <input className="game-input" type="date" value={date} onChange={e => setDate(e.target.value)} style={{ colorScheme: 'light' }} />
           </div>
           <div style={{ flex: 2, minWidth: 200 }}>
             <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 5 }}>Observações da sessão</label>

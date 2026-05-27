@@ -99,8 +99,13 @@ body {
 }
 .game-input::placeholder { color: #64748b; }
 select.game-input option { background: #111827; }
-/* Native date picker calendar rendered in light mode so it's visible on dark bg */
-input[type="date"].game-input { color-scheme: light; }
+/* Native date/time picker popup forced to light mode on all browsers */
+input[type="date"],
+input[type="datetime-local"],
+input[type="month"],
+input[type="time"] {
+  color-scheme: light;
+}
 
 .btn-primary {
   background: linear-gradient(135deg, #7c3aed, #6d28d9);
