@@ -10,6 +10,7 @@ import { WorkoutLogPage } from './pages/WorkoutLogPage';
 import { HistoryPage } from './pages/HistoryPage';
 import { AchievementsPage } from './pages/AchievementsPage';
 import { RecordsPage } from './pages/RecordsPage';
+import { ProfilePage } from './pages/ProfilePage';
 import { useAuthStore } from './store/authStore';
 
 export default function App() {
@@ -179,6 +180,7 @@ export default function App() {
           <Route path="/history"      element={<HistoryPage />} />
           <Route path="/achievements" element={<AchievementsPage />} />
           <Route path="/records"      element={<RecordsPage />} />
+          <Route path="/profile"      element={<ProfilePage />} />
         </Route>
       </Routes>
     </BrowserRouter>

@@ -53,7 +53,7 @@ interface GameStore {
 
   initData: (userId: string) => Promise<void>;
   clearData: () => void;
-  updateProfile: (data: { birthDate?: string; sex?: Sex }) => Promise<void>;
+  updateProfile: (data: { birthDate?: string; sex?: Sex; name?: string }) => Promise<void>;
   addWorkout: (input: WorkoutSessionInput) => Promise<void>;
   addExercise: (data: Omit<Exercise, 'id' | 'level' | 'currentXP' | 'totalXPEarned' | 'timesPerformed' | 'createdAt'>) => Promise<string | null>;
   updateExercise: (id: string, data: Partial<Pick<Exercise, 'name' | 'primaryMuscleId' | 'secondaryMuscles' | 'type' | 'notes'>>) => Promise<void>;
@@ -210,6 +210,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
     const upsertPayload: Record<string, unknown> = { id: authUser.id };
     if (data.birthDate !== undefined) upsertPayload.birth_date = data.birthDate;
     if (data.sex       !== undefined) upsertPayload.sex        = data.sex;
+    if (data.name      !== undefined) upsertPayload.name       = data.name;
     upsertPayload.updated_at = new Date().toISOString();
 
     const { error } = await supabase

@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Dumbbell, List, PlusCircle, History,
-  Trophy, Target, Zap, Trash2, X, LogOut,
+  Trophy, Target, Zap, Trash2, X, LogOut, User,
 } from 'lucide-react';
 import { useGameStore } from '../store/gameStore';
 import { useAuthStore } from '../store/authStore';
@@ -52,10 +52,28 @@ export function Navigation() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {user.name && (
-            <span style={{ fontSize: 12, color: '#64748b', maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <Link
+              to="/profile"
+              style={{
+                fontSize: 12, color: '#e2e8f0', maxWidth: 100,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                textDecoration: 'none',
+              }}
+            >
               {user.name}
-            </span>
+            </Link>
           )}
+          <Link
+            to="/profile"
+            style={{
+              background: 'none', border: '1px solid #1e2d4a', borderRadius: 8,
+              padding: '5px 8px', color: '#64748b',
+              display: 'flex', alignItems: 'center', gap: 4, fontSize: 12,
+            }}
+            title="Meu Perfil"
+          >
+            <User size={14} />
+          </Link>
           <button
             onClick={() => setShowLogout(true)}
             style={{
@@ -109,6 +127,19 @@ export function Navigation() {
                 🔥 {user.streak} dia{user.streak > 1 ? 's' : ''} seguidos
               </div>
             )}
+            <Link
+              to="/profile"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                marginTop: 8, fontSize: 11, color: '#7c3aed',
+                textDecoration: 'none', fontWeight: 600,
+                transition: 'color 0.15s',
+              }}
+              onMouseEnter={e => ((e.currentTarget as HTMLAnchorElement).style.color = '#a855f7')}
+              onMouseLeave={e => ((e.currentTarget as HTMLAnchorElement).style.color = '#7c3aed')}
+            >
+              <User size={11} /> Ver perfil →
+            </Link>
           </div>
         </div>
 
