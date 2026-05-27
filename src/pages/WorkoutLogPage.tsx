@@ -157,8 +157,9 @@ export function WorkoutLogPage() {
   const [date, setDate] = useState(today);
   const [notes, setNotes] = useState('');
   const [entries, setEntries] = useState<EntryDraft[]>([]);
-  const [success, setSuccess] = useState(false);
-  const [errors, setErrors] = useState<string[]>([]);
+  const [success, setSuccess]   = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors]   = useState<string[]>([]);
 
   function addEntry() {
     setEntries(es => [...es, {
@@ -197,17 +198,23 @@ export function WorkoutLogPage() {
     return errs;
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     const errs = validate();
     if (errs.length > 0) { setErrors(errs); return; }
     setErrors([]);
-    addWorkout({
-      date: new Date(date + 'T12:00:00').toISOString(),
-      entries: entries.map(({ expanded: _, ...e }) => e),
-      notes,
-    });
-    setSuccess(true);
-    setTimeout(() => navigate('/history'), 2000);
+    setSubmitting(true);
+    try {
+      await addWorkout({
+        date: new Date(date + 'T12:00:00').toISOString(),
+        entries: entries.map(({ expanded: _, ...e }) => e),
+        notes,
+      });
+      setSuccess(true);
+      setTimeout(() => navigate('/history'), 2000);
+    } catch {
+      setErrors(['Erro ao salvar treino. Verifique sua conexão e tente novamente.']);
+      setSubmitting(false);
+    }
   }
 
   if (success) {
@@ -279,8 +286,16 @@ export function WorkoutLogPage() {
               +{totalXPPreview} XP
             </span>
           </div>
-          <button className="btn-primary" style={{ width: '100%', justifyContent: 'center', padding: '12px', fontSize: 16 }} onClick={handleSubmit}>
-            <CheckCircle size={18} /> Finalizar Treino
+          <button
+            className="btn-primary"
+            style={{ width: '100%', justifyContent: 'center', padding: '12px', fontSize: 16, opacity: submitting ? 0.7 : 1 }}
+            onClick={handleSubmit}
+            disabled={submitting}
+          >
+            {submitting
+              ? <><span style={{ display: 'inline-block', width: 18, height: 18, border: '2px solid #ffffff60', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> Salvando...</>
+              : <><CheckCircle size={18} /> Finalizar Treino</>
+            }
           </button>
         </div>
       )}

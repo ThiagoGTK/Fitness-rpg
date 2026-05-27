@@ -34,7 +34,8 @@ function StatCard({ icon, label, value, color = '#a855f7', sub }: {
 export function Dashboard() {
   const { user, muscles, exercises, workouts, achievements, cleanReset } = useGameStore();
   const navigate = useNavigate();
-  const [showReset, setShowReset] = useState(false);
+  const [showReset, setShowReset]   = useState(false);
+  const [resetting, setResetting]   = useState(false);
 
   const sortedMuscles = [...muscles].sort((a, b) => b.totalXPEarned - a.totalXPEarned);
   const topMuscles = sortedMuscles.slice(0, 4);
@@ -342,17 +343,28 @@ export function Dashboard() {
             </p>
             <div style={{ display: 'flex', gap: 10 }}>
               <button
-                onClick={() => { cleanReset(); setShowReset(false); }}
+                onClick={async () => {
+                  setResetting(true);
+                  await cleanReset();
+                  setResetting(false);
+                  setShowReset(false);
+                }}
+                disabled={resetting}
                 style={{
                   flex: 1, padding: '12px', borderRadius: 8, border: 'none',
                   background: '#ef4444', color: 'white', fontWeight: 700, fontSize: 14,
-                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  cursor: resetting ? 'not-allowed' : 'pointer', opacity: resetting ? 0.7 : 1,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                 }}
               >
-                <Trash2 size={14} /> Sim, zerar tudo
+                {resetting
+                  ? <><span style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid #ffffff60', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> Zerando...</>
+                  : <><Trash2 size={14} /> Sim, zerar tudo</>
+                }
               </button>
               <button
                 onClick={() => setShowReset(false)}
+                disabled={resetting}
                 style={{
                   flex: 1, padding: '12px', borderRadius: 8,
                   border: '1px solid #1e2d4a', background: 'transparent',

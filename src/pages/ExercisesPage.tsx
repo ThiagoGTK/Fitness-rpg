@@ -26,7 +26,8 @@ function ExerciseModal({ exercise, onClose }: { exercise?: Exercise; onClose: ()
     type: exercise.type,
     notes: exercise.notes,
   } : { ...EMPTY_FORM });
-  const [error, setError] = useState('');
+  const [error, setError]     = useState('');
+  const [saving, setSaving]   = useState(false);
 
   function addSecondary() {
     const available = muscles.filter(m => m.id !== form.primaryMuscleId && !form.secondaryMuscles.some(s => s.muscleId === m.id));
@@ -47,16 +48,17 @@ function ExerciseModal({ exercise, onClose }: { exercise?: Exercise; onClose: ()
     }));
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!form.name.trim()) { setError('Nome é obrigatório'); return; }
     if (!form.primaryMuscleId) { setError('Músculo principal é obrigatório'); return; }
+    setSaving(true);
     const data = {
       name: form.name.trim(), primaryMuscleId: form.primaryMuscleId,
       secondaryMuscles: form.secondaryMuscles.filter(s => s.muscleId && s.muscleId !== form.primaryMuscleId),
       type: form.type, notes: form.notes,
     };
-    if (exercise) { updateExercise(exercise.id, data); }
-    else { addExercise(data); }
+    if (exercise) { await updateExercise(exercise.id, data); }
+    else { await addExercise(data); }
     onClose();
   }
 
@@ -129,10 +131,18 @@ function ExerciseModal({ exercise, onClose }: { exercise?: Exercise; onClose: ()
         </div>
 
         <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-          <button className="btn-primary" style={{ flex: 1, justifyContent: 'center' }} onClick={handleSubmit}>
-            <Save size={15} /> Salvar
+          <button
+            className="btn-primary"
+            style={{ flex: 1, justifyContent: 'center', opacity: saving ? 0.7 : 1 }}
+            onClick={handleSubmit}
+            disabled={saving}
+          >
+            {saving
+              ? <><span style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid #ffffff60', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> Salvando...</>
+              : <><Save size={15} /> Salvar</>
+            }
           </button>
-          <button className="btn-secondary" onClick={onClose}>Cancelar</button>
+          <button className="btn-secondary" onClick={onClose} disabled={saving}>Cancelar</button>
         </div>
       </div>
     </div>
@@ -141,12 +151,13 @@ function ExerciseModal({ exercise, onClose }: { exercise?: Exercise; onClose: ()
 
 export function ExercisesPage() {
   const { exercises, muscles, deleteExercise } = useGameStore();
-  const [showModal, setShowModal] = useState(false);
-  const [editing, setEditing] = useState<Exercise | undefined>();
-  const [search, setSearch] = useState('');
-  const [filterType, setFilterType] = useState('');
-  const [filterMuscle, setFilterMuscle] = useState('');
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [showModal, setShowModal]           = useState(false);
+  const [editing, setEditing]               = useState<Exercise | undefined>();
+  const [search, setSearch]                 = useState('');
+  const [filterType, setFilterType]         = useState('');
+  const [filterMuscle, setFilterMuscle]     = useState('');
+  const [confirmDelete, setConfirmDelete]   = useState<string | null>(null);
+  const [deleting, setDeleting]             = useState(false);
 
   const filtered = exercises.filter(ex => {
     const matchSearch = ex.name.toLowerCase().includes(search.toLowerCase());
@@ -171,10 +182,23 @@ export function ExercisesPage() {
             <h3 style={{ margin: '0 0 8px', color: '#f1f5f9' }}>Excluir exercício?</h3>
             <p style={{ color: '#64748b', fontSize: 14, margin: '0 0 20px' }}>Esta ação não pode ser desfeita.</p>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-              <button className="btn-danger" onClick={() => { deleteExercise(confirmDelete); setConfirmDelete(null); }}>
-                <Trash2 size={14} /> Excluir
+              <button
+                className="btn-danger"
+                disabled={deleting}
+                style={{ opacity: deleting ? 0.7 : 1 }}
+                onClick={async () => {
+                  setDeleting(true);
+                  await deleteExercise(confirmDelete);
+                  setDeleting(false);
+                  setConfirmDelete(null);
+                }}
+              >
+                {deleting
+                  ? <><span style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid #ffffff60', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> Excluindo...</>
+                  : <><Trash2 size={14} /> Excluir</>
+                }
               </button>
-              <button className="btn-secondary" onClick={() => setConfirmDelete(null)}>Cancelar</button>
+              <button className="btn-secondary" onClick={() => setConfirmDelete(null)} disabled={deleting}>Cancelar</button>
             </div>
           </div>
         </div>
