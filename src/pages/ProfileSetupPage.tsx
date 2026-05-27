@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Sex } from '../types';
 import { useGameStore } from '../store/gameStore';
 import { ChevronRight } from 'lucide-react';
+import { DatePickerInput } from '../components/ui/DatePickerInput';
 
 const SEX_OPTIONS: { value: Sex; label: string; emoji: string; desc: string }[] = [
   { value: 'male',   label: 'Masculino',          emoji: '♂️', desc: 'Homem' },
@@ -19,13 +20,21 @@ function calcAge(birthDate: string): number | null {
   return age;
 }
 
+// Default picker view: 25 years ago (sensible starting point for a fitness app)
+const DEFAULT_PICKER_DATE = (() => {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - 25);
+  return d.toISOString().slice(0, 10);
+})();
+
 export function ProfileSetupPage() {
   const { user, updateProfile } = useGameStore();
 
-  const [birthDate, setBirthDate] = useState('');
-  const [sex, setSex]             = useState<Sex | ''>('');
-  const [saving, setSaving]       = useState(false);
-  const [error, setError]         = useState('');
+  const [birthDate, setBirthDate]   = useState('');          // actual value ('' = not yet chosen)
+  const [pickerDate, setPickerDate] = useState(DEFAULT_PICKER_DATE); // display value for DatePickerInput
+  const [sex, setSex]               = useState<Sex | ''>('');
+  const [saving, setSaving]         = useState(false);
+  const [error, setError]           = useState('');
 
   const age = birthDate ? calcAge(birthDate) : null;
   const canSubmit = birthDate && sex && !saving;
@@ -44,9 +53,8 @@ export function ProfileSetupPage() {
     // AuthGuard detecta user.birthDate + user.sex preenchidos e libera o app
   }
 
-  // Max date = today, min date = 120 years ago
+  // Max date = today (can't select a future birth date)
   const maxDate = new Date().toISOString().slice(0, 10);
-  const minDate = new Date(new Date().getFullYear() - 120, 0, 1).toISOString().slice(0, 10);
 
   return (
     <div style={{
@@ -114,14 +122,10 @@ export function ProfileSetupPage() {
             <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#94a3b8', marginBottom: 8 }}>
               📅 Data de nascimento
             </label>
-            <input
-              className="game-input"
-              type="date"
-              value={birthDate}
-              min={minDate}
+            <DatePickerInput
+              value={pickerDate}
               max={maxDate}
-              style={{ width: '100%', boxSizing: 'border-box', colorScheme: 'only light' }}
-              onChange={e => { setBirthDate(e.target.value); setError(''); }}
+              onChange={v => { setPickerDate(v); setBirthDate(v); setError(''); }}
             />
             {age !== null && age >= 10 && (
               <div style={{ fontSize: 12, color: '#a855f7', marginTop: 6 }}>
