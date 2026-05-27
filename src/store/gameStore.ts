@@ -204,12 +204,23 @@ export const useGameStore = create<GameStore>()((set, get) => ({
     const { data: { user: authUser } } = await supabase.auth.getUser();
     if (!authUser) return;
 
-    const updates: Record<string, unknown> = {};
-    if (data.birthDate !== undefined) updates.birth_date = data.birthDate;
-    if (data.sex      !== undefined) updates.sex        = data.sex;
-    updates.updated_at = new Date().toISOString();
+    // Use upsert so the row is created if it somehow doesn't exist yet.
+    // onConflict:'id' → UPDATE when row exists, INSERT when it doesn't.
+    // Only the supplied fields change; name/joined_at/level/etc. are untouched.
+    const upsertPayload: Record<string, unknown> = { id: authUser.id };
+    if (data.birthDate !== undefined) upsertPayload.birth_date = data.birthDate;
+    if (data.sex       !== undefined) upsertPayload.sex        = data.sex;
+    upsertPayload.updated_at = new Date().toISOString();
 
-    await supabase.from('profiles').update(updates).eq('id', authUser.id);
+    const { error } = await supabase
+      .from('profiles')
+      .upsert(upsertPayload, { onConflict: 'id' });
+
+    if (error) {
+      console.error('[updateProfile] upsert failed:', error);
+      return;
+    }
+
     set(s => ({ user: { ...s.user, ...data } }));
   },
 
