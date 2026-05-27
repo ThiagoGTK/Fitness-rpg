@@ -13,56 +13,56 @@ interface TooltipState {
   y: number;
 }
 
-// Muscle overlay regions — front view
+// Muscle overlay regions — front view  (IDs = SEED_MUSCLES)
 const FRONT_REGIONS: Region[] = [
-  { muscleId: 'shoulders',  cx: 44,  cy: 93,  rx: 18, ry: 14 },
-  { muscleId: 'shoulders',  cx: 156, cy: 93,  rx: 18, ry: 14 },
-  { muscleId: 'chest',      cx: 100, cy: 122, rx: 34, ry: 24 },
-  { muscleId: 'biceps',     cx: 28,  cy: 145, rx: 11, ry: 21 },
-  { muscleId: 'biceps',     cx: 172, cy: 145, rx: 11, ry: 21 },
-  { muscleId: 'forearms',   cx: 21,  cy: 187, rx: 9,  ry: 20 },
-  { muscleId: 'forearms',   cx: 179, cy: 187, rx: 9,  ry: 20 },
-  { muscleId: 'core',       cx: 100, cy: 175, rx: 23, ry: 26 },
-  { muscleId: 'quadriceps', cx: 75,  cy: 284, rx: 20, ry: 36 },
-  { muscleId: 'quadriceps', cx: 125, cy: 284, rx: 20, ry: 36 },
-  { muscleId: 'calves',     cx: 73,  cy: 365, rx: 14, ry: 27 },
-  { muscleId: 'calves',     cx: 127, cy: 365, rx: 14, ry: 27 },
+  { muscleId: 'ombros',      cx: 44,  cy: 93,  rx: 18, ry: 14 },
+  { muscleId: 'ombros',      cx: 156, cy: 93,  rx: 18, ry: 14 },
+  { muscleId: 'peito',       cx: 100, cy: 122, rx: 34, ry: 24 },
+  { muscleId: 'biceps',      cx: 28,  cy: 145, rx: 11, ry: 21 },
+  { muscleId: 'biceps',      cx: 172, cy: 145, rx: 11, ry: 21 },
+  { muscleId: 'antebraco',   cx: 21,  cy: 187, rx: 9,  ry: 20 },
+  { muscleId: 'antebraco',   cx: 179, cy: 187, rx: 9,  ry: 20 },
+  { muscleId: 'abdomen',     cx: 100, cy: 175, rx: 23, ry: 26 },
+  { muscleId: 'quadriceps',  cx: 75,  cy: 284, rx: 20, ry: 36 },
+  { muscleId: 'quadriceps',  cx: 125, cy: 284, rx: 20, ry: 36 },
+  { muscleId: 'panturrilha', cx: 73,  cy: 365, rx: 14, ry: 27 },
+  { muscleId: 'panturrilha', cx: 127, cy: 365, rx: 14, ry: 27 },
 ];
 
-// Muscle overlay regions — back view
+// Muscle overlay regions — back view  (IDs = SEED_MUSCLES)
 const BACK_REGIONS: Region[] = [
-  { muscleId: 'traps',      cx: 100, cy: 90,  rx: 30, ry: 18 },
-  { muscleId: 'lats',       cx: 71,  cy: 148, rx: 25, ry: 34 },
-  { muscleId: 'lats',       cx: 129, cy: 148, rx: 25, ry: 34 },
-  { muscleId: 'triceps',    cx: 28,  cy: 142, rx: 11, ry: 22 },
-  { muscleId: 'triceps',    cx: 172, cy: 142, rx: 11, ry: 22 },
-  { muscleId: 'back',       cx: 100, cy: 200, rx: 21, ry: 17 },
-  { muscleId: 'glutes',     cx: 76,  cy: 246, rx: 22, ry: 22 },
-  { muscleId: 'glutes',     cx: 124, cy: 246, rx: 22, ry: 22 },
-  { muscleId: 'hamstrings', cx: 75,  cy: 300, rx: 20, ry: 34 },
-  { muscleId: 'hamstrings', cx: 125, cy: 300, rx: 20, ry: 34 },
-  { muscleId: 'calves',     cx: 73,  cy: 368, rx: 14, ry: 27 },
-  { muscleId: 'calves',     cx: 127, cy: 368, rx: 14, ry: 27 },
+  { muscleId: 'trapezio',    cx: 100, cy: 90,  rx: 30, ry: 18 },
+  { muscleId: 'costas',      cx: 71,  cy: 148, rx: 25, ry: 34 },
+  { muscleId: 'costas',      cx: 129, cy: 148, rx: 25, ry: 34 },
+  { muscleId: 'triceps',     cx: 28,  cy: 142, rx: 11, ry: 22 },
+  { muscleId: 'triceps',     cx: 172, cy: 142, rx: 11, ry: 22 },
+  { muscleId: 'lombar',      cx: 100, cy: 200, rx: 21, ry: 17 },
+  { muscleId: 'gluteos',     cx: 76,  cy: 246, rx: 22, ry: 22 },
+  { muscleId: 'gluteos',     cx: 124, cy: 246, rx: 22, ry: 22 },
+  { muscleId: 'posteriores', cx: 75,  cy: 300, rx: 20, ry: 34 },
+  { muscleId: 'posteriores', cx: 125, cy: 300, rx: 20, ry: 34 },
+  { muscleId: 'panturrilha', cx: 73,  cy: 368, rx: 14, ry: 27 },
+  { muscleId: 'panturrilha', cx: 127, cy: 368, rx: 14, ry: 27 },
 ];
 
 const FRONT_LABEL: Record<string, { x: number; y: number }> = {
-  shoulders:  { x: 100, y: 79 },
-  chest:      { x: 100, y: 122 },
-  biceps:     { x: 28,  y: 145 },
-  forearms:   { x: 21,  y: 187 },
-  core:       { x: 100, y: 175 },
-  quadriceps: { x: 100, y: 284 },
-  calves:     { x: 100, y: 365 },
+  ombros:      { x: 100, y: 79 },
+  peito:       { x: 100, y: 122 },
+  biceps:      { x: 28,  y: 145 },
+  antebraco:   { x: 21,  y: 187 },
+  abdomen:     { x: 100, y: 175 },
+  quadriceps:  { x: 100, y: 284 },
+  panturrilha: { x: 100, y: 365 },
 };
 
 const BACK_LABEL: Record<string, { x: number; y: number }> = {
-  traps:      { x: 100, y: 90 },
-  lats:       { x: 100, y: 148 },
-  triceps:    { x: 28,  y: 142 },
-  back:       { x: 100, y: 200 },
-  glutes:     { x: 100, y: 246 },
-  hamstrings: { x: 100, y: 300 },
-  calves:     { x: 100, y: 368 },
+  trapezio:    { x: 100, y: 90 },
+  costas:      { x: 100, y: 148 },
+  triceps:     { x: 28,  y: 142 },
+  lombar:      { x: 100, y: 200 },
+  gluteos:     { x: 100, y: 246 },
+  posteriores: { x: 100, y: 300 },
+  panturrilha: { x: 100, y: 368 },
 };
 
 function levelFill(level: number): string {
@@ -144,21 +144,25 @@ export function BodyMap() {
 
   const muscleMap = Object.fromEntries(muscles.map(m => [m.id, m]));
 
-  function handleMouseEnter(muscleId: string, e: React.MouseEvent) {
+  function showFor(muscleId: string, clientX: number, clientY: number) {
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
     setHoveredId(muscleId);
-    setTooltip({ muscleId, x: e.clientX - rect.left, y: e.clientY - rect.top });
+    setTooltip({ muscleId, x: clientX - rect.left, y: clientY - rect.top });
   }
 
-  function handleMouseMove(e: React.MouseEvent) {
+  function handlePointerEnter(muscleId: string, e: React.PointerEvent) {
+    showFor(muscleId, e.clientX, e.clientY);
+  }
+
+  function handlePointerMove(e: React.PointerEvent) {
     if (!tooltip) return;
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
     setTooltip(t => t ? { ...t, x: e.clientX - rect.left, y: e.clientY - rect.top } : null);
   }
 
-  function handleMouseLeave() {
+  function handlePointerLeave() {
     setHoveredId(null);
     setTooltip(null);
   }
@@ -186,10 +190,10 @@ export function BodyMap() {
           <ellipse
             cx={r.cx} cy={r.cy} rx={r.rx} ry={r.ry}
             fill={fill} opacity={opacity} filter={filter}
-            style={{ cursor: 'pointer', transition: 'opacity 0.2s' }}
-            onMouseEnter={e => handleMouseEnter(r.muscleId, e)}
-            onMouseMove={handleMouseMove}
-            onMouseLeave={handleMouseLeave}
+            style={{ cursor: 'pointer', transition: 'opacity 0.2s', touchAction: 'none' }}
+            onPointerEnter={e => handlePointerEnter(r.muscleId, e)}
+            onPointerMove={handlePointerMove}
+            onPointerLeave={handlePointerLeave}
           />
           {showLabel && lp && (
             <g style={{ pointerEvents: 'none' }}>
