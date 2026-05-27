@@ -52,16 +52,26 @@ export function calculateEntryXP(
   const volume = calcVolume(entry.sets);
   const totalReps = calcTotalReps(entry.sets);
   const numSets = entry.sets.length;
+  const isCardio = exercise.primaryMuscleId === 'cardio';
 
-  // Base XP: weighted uses volume/10, bodyweight uses reps×1.5
   let baseXP: number;
-  if (volume > 0) {
-    baseXP = Math.floor(volume / 10);
+
+  if (isCardio) {
+    // Cardio: 5 XP por minuto + bônus de volume/série se informados
+    const durationXP = entry.duration ? Math.floor(entry.duration * 5) : 0;
+    const volumeXP   = volume > 0
+      ? Math.floor(volume / 10)
+      : totalReps > 0 ? Math.floor(totalReps * 1.5) : 0;
+    baseXP = Math.max(durationXP + volumeXP, numSets > 0 ? numSets * 3 : 5);
   } else {
-    baseXP = Math.floor(totalReps * 1.5);
+    // Força / resistência / mobilidade / alongamento
+    if (volume > 0) {
+      baseXP = Math.floor(volume / 10);
+    } else {
+      baseXP = Math.floor(totalReps * 1.5);
+    }
+    baseXP = Math.max(baseXP, numSets * 3);
   }
-  // Floor so every set gives at least 3 XP
-  baseXP = Math.max(baseXP, numSets * 3);
 
   // Difficulty multiplier: difficulty 1 → 0.76, difficulty 10 → 1.36
   const diffMult = 0.7 + (entry.difficulty / 10) * 0.66;

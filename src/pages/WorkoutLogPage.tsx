@@ -79,6 +79,7 @@ function EntryCard({ entry, index, exercises, muscles, onUpdate, onRemove, prevS
 
   const exercise = exercises.find(e => e.id === entry.exerciseId);
   const primaryMuscle = exercise ? muscles.find(m => m.id === exercise.primaryMuscleId) : null;
+  const isCardio = exercise?.primaryMuscleId === 'cardio';
   const volume = calcVolume(entry.sets);
   const xpPreview = exercise ? calculateEntryXP(entry, exercise, prevSessions).exerciseXP : 0;
 
@@ -217,17 +218,37 @@ function EntryCard({ entry, index, exercises, muscles, onUpdate, onRemove, prevS
 
           {/* Extra fields */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 12 }}>
-            <div>
-              <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 5 }}>Descanso (s)</label>
-              <input className="game-input" type="number" min={0} value={entry.restTime || ''}
-                onChange={e => onUpdate({ ...entry, restTime: Number(e.target.value) || undefined })}
-                placeholder="Opcional" />
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 5 }}>Duração (min)</label>
-              <input className="game-input" type="number" min={0} value={entry.duration || ''}
+            {!isCardio && (
+              <div>
+                <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 5 }}>Descanso (s)</label>
+                <input className="game-input" type="number" min={0} value={entry.restTime || ''}
+                  onChange={e => onUpdate({ ...entry, restTime: Number(e.target.value) || undefined })}
+                  placeholder="Opcional" />
+              </div>
+            )}
+            <div style={{ gridColumn: isCardio ? '1 / -1' : 'auto' }}>
+              <label style={{
+                display: 'block', fontSize: 12, marginBottom: 5,
+                color: isCardio && entry.sets.length === 0 && !entry.duration ? '#ef4444' : isCardio ? '#10b981' : '#94a3b8',
+                fontWeight: isCardio ? 700 : 400,
+              }}>
+                ⏱️ Duração (min){isCardio && entry.sets.length === 0 ? ' *' : ''}
+              </label>
+              <input
+                className="game-input"
+                type="number" min={0}
+                value={entry.duration || ''}
                 onChange={e => onUpdate({ ...entry, duration: Number(e.target.value) || undefined })}
-                placeholder="Opcional" />
+                placeholder={isCardio && entry.sets.length === 0 ? 'Obrigatório para cardio' : 'Opcional'}
+                style={isCardio ? { borderColor: entry.duration ? '#10b98160' : '#ef444440' } : {}}
+              />
+              {isCardio && (
+                <div style={{ fontSize: 10, color: '#64748b', marginTop: 3 }}>
+                  {entry.duration
+                    ? `≈ ${entry.duration * 5} XP base de duração${volume > 0 ? ` + ${Math.floor(volume / 10)} XP de volume` : ''}`
+                    : entry.sets.length > 0 ? 'Adicione duração para bônus de XP' : 'XP calculado pelos minutos'}
+                </div>
+              )}
             </div>
           </div>
 
@@ -298,7 +319,14 @@ export function WorkoutLogPage() {
     if (entries.length === 0) errs.push('Adicione pelo menos um exercício');
     entries.forEach((e, i) => {
       if (!e.exerciseId) errs.push(`Exercício ${i + 1}: selecione o exercício`);
-      if (e.sets.length === 0) errs.push(`Exercício ${i + 1}: adicione pelo menos uma série`);
+      const ex = exercises.find(x => x.id === e.exerciseId);
+      const isCardio = ex?.primaryMuscleId === 'cardio';
+      if (!isCardio && e.sets.length === 0) {
+        errs.push(`Exercício ${i + 1}: adicione pelo menos uma série`);
+      }
+      if (isCardio && e.sets.length === 0 && !e.duration) {
+        errs.push(`Exercício ${i + 1}: informe a duração em minutos`);
+      }
       e.sets.forEach((s, si) => {
         if (s.reps <= 0) errs.push(`Exercício ${i + 1}, série ${si + 1}: reps inválidas`);
       });
