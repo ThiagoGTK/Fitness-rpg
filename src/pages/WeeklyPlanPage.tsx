@@ -3,6 +3,7 @@ import { Plus, Pencil, Trash2, CheckCircle2, Moon, X, ChevronDown, Dumbbell, Zap
 import { useWeeklyStore, type WeeklyPlan, type ExerciseInput, type CompleteDayResult } from '../store/weeklyStore';
 import { useGameStore } from '../store/gameStore';
 import { calculateEntryXP } from '../services/xpCalculator';
+import type { Exercise, MuscleGroup, WorkoutSession } from '../types';
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
@@ -24,16 +25,16 @@ function todayStr() {
 
 function estimateXP(
   plan: WeeklyPlan,
-  exercises: ReturnType<typeof useGameStore>['exercises'],
-  workouts: ReturnType<typeof useGameStore>['workouts'],
+  exercises: Exercise[],
+  workouts: WorkoutSession[],
 ) {
   let total = 0;
   const byMuscle: Record<string, number> = {};
 
   for (const planEx of plan.exercises) {
-    let ex = planEx.exerciseId
-      ? exercises.find(e => e.id === planEx.exerciseId)
-      : exercises.find(e => e.name.toLowerCase() === planEx.exerciseName.toLowerCase());
+    const ex = planEx.exerciseId
+      ? exercises.find((e: Exercise) => e.id === planEx.exerciseId)
+      : exercises.find((e: Exercise) => e.name.toLowerCase() === planEx.exerciseName.toLowerCase());
     if (!ex) continue;
 
     const sets = Array.from({ length: Math.max(1, planEx.sets) }, () => ({
@@ -53,7 +54,7 @@ function estimateXP(
 // ─── Editor state type ─────────────────────────────────────────────────────────
 
 interface EditorEx {
-  exerciseId: string;   // required: must pick from library
+  exerciseId: string;
   sets: number;
   reps: number;
   weight: number;
@@ -86,16 +87,15 @@ function DayEditorModal({
   existing: WeeklyPlan | undefined;
   onClose: () => void;
 }) {
-  const exercises    = useGameStore(s => s.exercises);
-  const muscles      = useGameStore(s => s.muscles);
-  const upsertDay    = useWeeklyStore(s => s.upsertDay);
+  const exercises = useGameStore(s => s.exercises);
+  const muscles   = useGameStore(s => s.muscles);
+  const upsertDay = useWeeklyStore(s => s.upsertDay);
 
   const [workoutName, setWorkoutName] = useState(existing?.workoutName ?? '');
   const [isRestDay,   setIsRestDay]   = useState(existing?.isRestDay ?? false);
   const [notes,       setNotes]       = useState(existing?.notes ?? '');
   const [saving,      setSaving]      = useState(false);
 
-  // Build initial exercise list from existing plan
   const [editorExs, setEditorExs] = useState<EditorEx[]>(() => {
     if (!existing || existing.isRestDay) return [];
     return existing.exercises
@@ -112,9 +112,8 @@ function DayEditorModal({
 
   function addExercise() {
     if (exercises.length === 0) return;
-    const first = exercises[0];
     setEditorExs(prev => [...prev, {
-      exerciseId: first.id, sets: 3, reps: 10, weight: 0, restSeconds: 60, notes: '',
+      exerciseId: exercises[0].id, sets: 3, reps: 10, weight: 0, restSeconds: 60, notes: '',
     }]);
   }
 
@@ -129,18 +128,18 @@ function DayEditorModal({
   async function handleSave() {
     setSaving(true);
     const exInputs: ExerciseInput[] = editorExs.map(e => {
-      const libEx = exercises.find(x => x.id === e.exerciseId)!;
+      const libEx = exercises.find((x: Exercise) => x.id === e.exerciseId);
       return {
-        exerciseId:        e.exerciseId,
-        exerciseName:      libEx?.name ?? '',
-        primaryMuscleId:   libEx?.primaryMuscleId ?? '',
-        secondaryMuscles:  libEx?.secondaryMuscles ?? [],
-        exerciseType:      libEx?.type ?? 'strength',
-        sets:              e.sets,
-        reps:              e.reps,
-        weight:            e.weight,
-        restSeconds:       e.restSeconds || null,
-        notes:             e.notes,
+        exerciseId:       e.exerciseId,
+        exerciseName:     libEx?.name ?? '',
+        primaryMuscleId:  libEx?.primaryMuscleId ?? '',
+        secondaryMuscles: libEx?.secondaryMuscles ?? [],
+        exerciseType:     libEx?.type ?? 'strength',
+        sets:             e.sets,
+        reps:             e.reps,
+        weight:           e.weight,
+        restSeconds:      e.restSeconds || null,
+        notes:            e.notes,
       };
     });
 
@@ -160,9 +159,12 @@ function DayEditorModal({
     borderRadius: 8, padding: '9px 12px', color: '#e2e8f0', fontSize: 14,
     outline: 'none', boxSizing: 'border-box',
   };
-  const numInput: React.CSSProperties = { ...input, width: '100%', textAlign: 'center' };
+  const numInput: React.CSSProperties = { ...input, textAlign: 'center' };
 
-  const muscleMap = useMemo(() => Object.fromEntries(muscles.map(m => [m.id, m.name])), [muscles]);
+  const muscleMap = useMemo(
+    () => Object.fromEntries(muscles.map((m: MuscleGroup) => [m.id, m.name])),
+    [muscles],
+  );
 
   return (
     <div style={{
@@ -233,11 +235,10 @@ function DayEditorModal({
 
           {!isRestDay && (
             <>
-              {/* Exercise list */}
               {editorExs.length > 0 && (
                 <div style={{ marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {editorExs.map((ex, idx) => {
-                    const libEx = exercises.find(e => e.id === ex.exerciseId);
+                    const libEx = exercises.find((e: Exercise) => e.id === ex.exerciseId);
                     return (
                       <div
                         key={idx}
@@ -246,7 +247,6 @@ function DayEditorModal({
                           borderRadius: 10, padding: '12px 14px',
                         }}
                       >
-                        {/* Exercise selector */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                           <div style={{ flex: 1, position: 'relative' }}>
                             <select
@@ -257,7 +257,7 @@ function DayEditorModal({
                                 background: '#0d1526', cursor: 'pointer',
                               }}
                             >
-                              {exercises.map(e => (
+                              {exercises.map((e: Exercise) => (
                                 <option key={e.id} value={e.id}>
                                   {e.name} ({muscleMap[e.primaryMuscleId] ?? e.primaryMuscleId})
                                 </option>
@@ -273,12 +273,11 @@ function DayEditorModal({
                           </button>
                         </div>
 
-                        {/* Sets / reps / weight */}
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
                           {[
-                            { label: 'Séries', key: 'sets' as const,   min: 1, step: 1 },
-                            { label: 'Reps',   key: 'reps' as const,   min: 1, step: 1 },
-                            { label: 'Carga (kg)', key: 'weight' as const, min: 0, step: 0.5 },
+                            { label: 'Séries',    key: 'sets'    as const, min: 1, step: 1   },
+                            { label: 'Reps',      key: 'reps'    as const, min: 1, step: 1   },
+                            { label: 'Carga (kg)',key: 'weight'  as const, min: 0, step: 0.5 },
                           ].map(({ label, key, min, step }) => (
                             <div key={key}>
                               <label style={{ fontSize: 10, color: '#64748b', display: 'block', marginBottom: 3, textAlign: 'center' }}>
@@ -320,7 +319,6 @@ function DayEditorModal({
                 <Plus size={14} /> Adicionar exercício
               </button>
 
-              {/* Day notes */}
               <div>
                 <label style={{ fontSize: 12, color: '#94a3b8', display: 'block', marginBottom: 5, fontWeight: 600 }}>
                   Observações (opcional)
@@ -388,12 +386,12 @@ function ConfirmModal({
   plan: WeeklyPlan;
   estimatedXP: number;
   estimatedByMuscle: Record<string, number>;
-  muscles: ReturnType<typeof useGameStore>['muscles'];
+  muscles: MuscleGroup[];
   completing: boolean;
   onConfirm: () => void;
   onClose: () => void;
 }) {
-  const muscleMap = Object.fromEntries(muscles.map(m => [m.id, m]));
+  const muscleMap = Object.fromEntries(muscles.map((m: MuscleGroup) => [m.id, m]));
   const topMuscles = Object.entries(estimatedByMuscle)
     .sort(([, a], [, b]) => b - a)
     .slice(0, 4);
@@ -418,7 +416,6 @@ function ConfirmModal({
           </p>
         </div>
 
-        {/* Estimated XP */}
         <div style={{
           background: '#111827', border: '1px solid #1e2d4a', borderRadius: 10,
           padding: '14px 16px', marginBottom: 16,
@@ -432,7 +429,7 @@ function ConfirmModal({
           {topMuscles.length > 0 && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {topMuscles.map(([mId, xp]) => {
-                const m = muscleMap[mId];
+                const m = muscleMap[mId] as MuscleGroup | undefined;
                 return (
                   <span key={mId} style={{
                     display: 'inline-flex', alignItems: 'center', gap: 4,
@@ -447,7 +444,6 @@ function ConfirmModal({
           )}
         </div>
 
-        {/* Exercise summary */}
         {plan.exercises.length > 0 && (
           <div style={{ marginBottom: 20, fontSize: 13, color: '#64748b' }}>
             {plan.exercises.length} exercício{plan.exercises.length !== 1 ? 's' : ''} ·{' '}
@@ -496,10 +492,10 @@ function XPResultModal({
   onClose,
 }: {
   result: CompleteDayResult;
-  muscles: ReturnType<typeof useGameStore>['muscles'];
+  muscles: MuscleGroup[];
   onClose: () => void;
 }) {
-  const muscleMap = Object.fromEntries(muscles.map(m => [m.id, m]));
+  const muscleMap = Object.fromEntries(muscles.map((m: MuscleGroup) => [m.id, m]));
   const sorted = Object.entries(result.xpByMuscle)
     .sort(([, a], [, b]) => b - a)
     .slice(0, 6);
@@ -531,7 +527,7 @@ function XPResultModal({
               XP POR MÚSCULO
             </div>
             {sorted.map(([mId, xp]) => {
-              const m = muscleMap[mId];
+              const m = muscleMap[mId] as MuscleGroup | undefined;
               const maxXP = sorted[0][1];
               const pct = maxXP > 0 ? (xp / maxXP) * 100 : 0;
               return (
@@ -572,7 +568,6 @@ function DayCard({
   isToday,
   exercises,
   workouts,
-  muscles,
   onEdit,
   onComplete,
   onDelete,
@@ -580,16 +575,15 @@ function DayCard({
   dow: number;
   plan: WeeklyPlan | undefined;
   isToday: boolean;
-  exercises: ReturnType<typeof useGameStore>['exercises'];
-  workouts:  ReturnType<typeof useGameStore>['workouts'];
-  muscles:   ReturnType<typeof useGameStore>['muscles'];
+  exercises: Exercise[];
+  workouts:  WorkoutSession[];
   onEdit:     () => void;
   onComplete: () => void;
   onDelete:   () => void;
 }) {
   const today = todayStr();
-  const isDoneToday = plan?.lastCompletedDate === today;
-  const isRest      = plan?.isRestDay;
+  const isDoneToday  = plan?.lastCompletedDate === today;
+  const isRest       = plan?.isRestDay;
   const hasExercises = plan && !isRest && plan.exercises.length > 0;
 
   const { total: estXP } = useMemo(
@@ -630,10 +624,9 @@ function DayCard({
           </div>
         </div>
 
-        {/* Status badge */}
-        {isDoneToday && <Badge color="#10b981"><CheckCircle2 size={10} /> Feito</Badge>}
-        {!isDoneToday && isRest && <Badge color="#64748b"><Moon size={10} /> Descanso</Badge>}
-        {!isDoneToday && !plan && <Badge color="#475569">Livre</Badge>}
+        {isDoneToday  && <Badge color="#10b981"><CheckCircle2 size={10} /> Feito</Badge>}
+        {!isDoneToday && isRest  && <Badge color="#64748b"><Moon size={10} /> Descanso</Badge>}
+        {!isDoneToday && !plan   && <Badge color="#475569">Livre</Badge>}
         {!isDoneToday && hasExercises && (
           <Badge color="#a855f7"><Dumbbell size={10} /> {plan!.exercises.length} ex.</Badge>
         )}
@@ -668,7 +661,7 @@ function DayCard({
         </div>
       )}
 
-      {/* Exercise chips (collapsed) */}
+      {/* Exercise chips */}
       {hasExercises && plan!.exercises.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
           {plan!.exercises.slice(0, 4).map((pe, i) => (
@@ -676,7 +669,7 @@ function DayCard({
               background: '#111827', border: '1px solid #1e2d4a',
               borderRadius: 6, padding: '2px 8px', fontSize: 10, color: '#94a3b8',
             }}>
-              {pe.exerciseName || exercises.find(e => e.id === pe.exerciseId)?.name || '?'}
+              {pe.exerciseName || exercises.find((e: Exercise) => e.id === pe.exerciseId)?.name || '?'}
             </span>
           ))}
           {plan!.exercises.length > 4 && (
@@ -692,20 +685,17 @@ function DayCard({
 
       {/* Action buttons */}
       <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-        {/* Complete button — only if has exercises and not done today */}
         {hasExercises && !isDoneToday && (
           <button
             onClick={onComplete}
             style={{
-              flex: 1, padding: '9px', borderRadius: 8, border: 'none',
-              background: isToday
-                ? 'linear-gradient(135deg, #7c3aed, #6d28d9)'
-                : 'transparent',
-              color: isToday ? 'white' : '#7c3aed',
+              flex: 1, padding: '9px', borderRadius: 8,
               border: isToday ? 'none' : '1px solid #7c3aed50',
+              background: isToday ? 'linear-gradient(135deg, #7c3aed, #6d28d9)' : 'transparent',
+              color: isToday ? 'white' : '#7c3aed',
               fontWeight: 700, fontSize: 13, cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-            } as React.CSSProperties}
+            }}
           >
             <CheckCircle2 size={13} /> Concluir
           </button>
@@ -721,7 +711,6 @@ function DayCard({
           </div>
         )}
 
-        {/* Edit */}
         <button
           onClick={onEdit}
           style={{
@@ -734,7 +723,6 @@ function DayCard({
           <Pencil size={13} /> {plan ? 'Editar' : 'Configurar'}
         </button>
 
-        {/* Delete (only if plan exists) */}
         {plan && (
           <button
             onClick={onDelete}
@@ -755,10 +743,10 @@ function DayCard({
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 
 export function WeeklyPlanPage() {
-  const { plans, upsertDay: _u, deleteDay, completeDay } = useWeeklyStore();
-  const { exercises, workouts, muscles } = useGameStore(s => ({
-    exercises: s.exercises, workouts: s.workouts, muscles: s.muscles,
-  }));
+  const { plans, deleteDay, completeDay } = useWeeklyStore();
+  const exercises = useGameStore(s => s.exercises);
+  const workouts  = useGameStore(s => s.workouts);
+  const muscles   = useGameStore(s => s.muscles);
 
   const [editingDow,    setEditingDow]    = useState<number | null>(null);
   const [confirmingDow, setConfirmingDow] = useState<number | null>(null);
@@ -794,10 +782,9 @@ export function WeeklyPlanPage() {
     await deleteDay(dow);
   }
 
-  // Calculate weekly stats
-  const totalDays       = plans.filter(p => !p.isRestDay && p.exercises.length > 0).length;
-  const completedToday  = plans.filter(p => p.lastCompletedDate === todayStr()).length;
-  const restDays        = plans.filter(p => p.isRestDay).length;
+  const totalDays      = plans.filter(p => !p.isRestDay && p.exercises.length > 0).length;
+  const completedToday = plans.filter(p => p.lastCompletedDate === todayStr()).length;
+  const restDays       = plans.filter(p => p.isRestDay).length;
 
   return (
     <div className="page-wrap">
@@ -816,27 +803,19 @@ export function WeeklyPlanPage() {
 
       {/* Summary chips */}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 24 }}>
-        <div style={{
-          background: '#111827', border: '1px solid #1e2d4a', borderRadius: 10,
-          padding: '10px 16px', minWidth: 120,
-        }}>
-          <div style={{ fontSize: 10, color: '#64748b', marginBottom: 4, fontWeight: 600 }}>DIAS ATIVOS</div>
-          <div style={{ fontSize: 22, fontWeight: 900, color: '#a855f7' }}>{totalDays}</div>
-        </div>
-        <div style={{
-          background: '#111827', border: '1px solid #1e2d4a', borderRadius: 10,
-          padding: '10px 16px', minWidth: 120,
-        }}>
-          <div style={{ fontSize: 10, color: '#64748b', marginBottom: 4, fontWeight: 600 }}>DESCANSO</div>
-          <div style={{ fontSize: 22, fontWeight: 900, color: '#64748b' }}>{restDays}</div>
-        </div>
-        <div style={{
-          background: '#111827', border: '1px solid #10b98130', borderRadius: 10,
-          padding: '10px 16px', minWidth: 120,
-        }}>
-          <div style={{ fontSize: 10, color: '#64748b', marginBottom: 4, fontWeight: 600 }}>FEITOS HOJE</div>
-          <div style={{ fontSize: 22, fontWeight: 900, color: '#10b981' }}>{completedToday}</div>
-        </div>
+        {[
+          { label: 'DIAS ATIVOS', value: totalDays,      color: '#a855f7' },
+          { label: 'DESCANSO',    value: restDays,       color: '#64748b' },
+          { label: 'FEITOS HOJE', value: completedToday, color: '#10b981' },
+        ].map(({ label, value, color }) => (
+          <div key={label} style={{
+            background: '#111827', border: `1px solid ${color}20`, borderRadius: 10,
+            padding: '10px 16px', minWidth: 110,
+          }}>
+            <div style={{ fontSize: 10, color: '#64748b', marginBottom: 4, fontWeight: 600 }}>{label}</div>
+            <div style={{ fontSize: 22, fontWeight: 900, color }}>{value}</div>
+          </div>
+        ))}
       </div>
 
       {/* Day cards grid */}
@@ -853,7 +832,6 @@ export function WeeklyPlanPage() {
             isToday={dow === today}
             exercises={exercises}
             workouts={workouts}
-            muscles={muscles}
             onEdit={() => setEditingDow(dow)}
             onComplete={() => setConfirmingDow(dow)}
             onDelete={() => handleDelete(dow)}
