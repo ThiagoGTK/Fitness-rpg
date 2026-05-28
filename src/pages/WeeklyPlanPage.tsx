@@ -3,7 +3,8 @@ import { Plus, Pencil, Trash2, CheckCircle2, Moon, X, ChevronDown, Dumbbell, Zap
 import { useWeeklyStore, type WeeklyPlan, type ExerciseInput, type CompleteDayResult } from '../store/weeklyStore';
 import { useGameStore } from '../store/gameStore';
 import { calculateEntryXP } from '../services/xpCalculator';
-import type { Exercise, MuscleGroup, WorkoutSession } from '../types';
+import type { Exercise, MuscleGroup, WorkoutSession, ExerciseType } from '../types';
+import { EXERCISE_TYPE_LABELS } from '../types';
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
@@ -87,9 +88,10 @@ function DayEditorModal({
   existing: WeeklyPlan | undefined;
   onClose: () => void;
 }) {
-  const exercises = useGameStore(s => s.exercises);
-  const muscles   = useGameStore(s => s.muscles);
-  const upsertDay = useWeeklyStore(s => s.upsertDay);
+  const exercises        = useGameStore(s => s.exercises);
+  const muscles          = useGameStore(s => s.muscles);
+  const addExToLib       = useGameStore(s => s.addExercise);
+  const upsertDay        = useWeeklyStore(s => s.upsertDay);
 
   const [workoutName, setWorkoutName] = useState(existing?.workoutName ?? '');
   const [isRestDay,   setIsRestDay]   = useState(existing?.isRestDay ?? false);
@@ -110,18 +112,65 @@ function DayEditorModal({
       }));
   });
 
-  function addExercise() {
+  // ── Inline exercise creation state ──────────────────────────────────────────
+  const [creatingIdx,  setCreatingIdx]  = useState<number | null>(null);
+  const [newName,      setNewName]      = useState('');
+  const [newMuscleId,  setNewMuscleId]  = useState('');
+  const [newType,      setNewType]      = useState<ExerciseType>('strength');
+  const [creating,     setCreating]     = useState(false);
+  const [createError,  setCreateError]  = useState('');
+
+  function openCreate(idx: number) {
+    setCreatingIdx(idx);
+    setNewName(''); setNewMuscleId(''); setNewType('strength');
+    setCreateError('');
+  }
+
+  function cancelCreate(idx: number) {
+    setCreatingIdx(null);
+    setCreateError('');
+    // revert the slot back to the first library exercise
+    if (exercises.length > 0) {
+      updateExSlot(idx, { exerciseId: exercises[0].id });
+    }
+  }
+
+  async function handleCreateForSlot(idx: number) {
+    if (!newName.trim())  { setCreateError('Informe o nome do exercício'); return; }
+    if (!newMuscleId)     { setCreateError('Selecione o músculo principal'); return; }
+    setCreating(true);
+    setCreateError('');
+    const newId = await addExToLib({
+      name: newName.trim(),
+      primaryMuscleId: newMuscleId,
+      secondaryMuscles: [],
+      type: newType,
+      notes: '',
+    });
+    setCreating(false);
+    if (newId) {
+      updateExSlot(idx, { exerciseId: newId });
+      setCreatingIdx(null);
+      setNewName(''); setNewMuscleId(''); setNewType('strength');
+    } else {
+      setCreateError('Erro ao criar exercício. Tente novamente.');
+    }
+  }
+
+  // ── Slot helpers ─────────────────────────────────────────────────────────────
+  function addSlot() {
     if (exercises.length === 0) return;
     setEditorExs(prev => [...prev, {
       exerciseId: exercises[0].id, sets: 3, reps: 10, weight: 0, restSeconds: 60, notes: '',
     }]);
   }
 
-  function removeExercise(idx: number) {
+  function removeSlot(idx: number) {
+    if (creatingIdx === idx) setCreatingIdx(null);
     setEditorExs(prev => prev.filter((_, i) => i !== idx));
   }
 
-  function updateExercise(idx: number, patch: Partial<EditorEx>) {
+  function updateExSlot(idx: number, patch: Partial<EditorEx>) {
     setEditorExs(prev => prev.map((ex, i) => i === idx ? { ...ex, ...patch } : ex));
   }
 
@@ -167,208 +216,317 @@ function DayEditorModal({
   );
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 400, background: 'rgba(0,0,0,0.85)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
-    }}>
-      <div style={{
-        background: '#0d1526', border: '1px solid #1e2d4a', borderRadius: 16,
-        width: '100%', maxWidth: 560, maxHeight: '90vh', display: 'flex', flexDirection: 'column',
-        boxShadow: '0 24px 60px rgba(0,0,0,0.7)',
-      }}>
-        {/* Header */}
-        <div style={{
-          padding: '18px 20px 14px', borderBottom: '1px solid #1e2d4a',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
-        }}>
-          <div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: '#e2e8f0' }}>
-              {existing ? 'Editar treino' : 'Adicionar treino'}
-            </div>
-            <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{DAY_NAMES_FULL[dayOfWeek]}</div>
-          </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: 4 }}>
-            <X size={18} />
-          </button>
-        </div>
+    <>
+      <style>{`
+        .weekly-modal-backdrop {
+          position: fixed; inset: 0; z-index: 400; background: rgba(0,0,0,0.85);
+          display: flex; align-items: flex-end; justify-content: center; padding: 0;
+        }
+        .weekly-modal-box {
+          background: #0d1526; border: 1px solid #1e2d4a;
+          border-radius: 20px 20px 0 0; width: 100%; max-width: 100%;
+          max-height: 92vh; display: flex; flex-direction: column;
+          box-shadow: 0 -8px 40px rgba(0,0,0,0.6);
+        }
+        @media (min-width: 640px) {
+          .weekly-modal-backdrop { align-items: center; padding: 16px; }
+          .weekly-modal-box { border-radius: 16px; max-width: 560px; box-shadow: 0 24px 60px rgba(0,0,0,0.7); }
+        }
+      `}</style>
 
-        {/* Scrollable body */}
-        <div style={{ overflowY: 'auto', padding: '16px 20px', flex: 1 }}>
-          {/* Workout name */}
-          <div style={{ marginBottom: 14 }}>
-            <label style={{ fontSize: 12, color: '#94a3b8', display: 'block', marginBottom: 5, fontWeight: 600 }}>
-              Nome do treino
-            </label>
-            <input
-              value={workoutName}
-              onChange={e => setWorkoutName(e.target.value)}
-              placeholder={DAY_NAMES_FULL[dayOfWeek]}
-              style={input}
-            />
-          </div>
+      <div className="weekly-modal-backdrop">
+        <div className="weekly-modal-box">
 
-          {/* Rest day toggle */}
+          {/* ── Fixed header ── */}
           <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            background: '#111827', border: '1px solid #1e2d4a', borderRadius: 10,
-            padding: '12px 14px', marginBottom: 16,
+            padding: '16px 20px 14px', borderBottom: '1px solid #1e2d4a',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
+            position: 'relative',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Moon size={15} color="#94a3b8" />
-              <span style={{ fontSize: 14, color: '#e2e8f0', fontWeight: 600 }}>Dia de descanso</span>
+            <div style={{ position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', width: 36, height: 4, borderRadius: 2, background: '#1e2d4a' }} />
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: '#e2e8f0' }}>
+                {existing ? 'Editar treino' : 'Adicionar treino'}
+              </div>
+              <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{DAY_NAMES_FULL[dayOfWeek]}</div>
             </div>
-            <button
-              onClick={() => setIsRestDay(v => !v)}
-              style={{
-                width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer',
-                background: isRestDay ? '#7c3aed' : '#1e2d4a',
-                position: 'relative', transition: 'background 0.2s',
-              }}
-            >
-              <span style={{
-                position: 'absolute', top: 2, width: 20, height: 20,
-                borderRadius: '50%', background: '#e2e8f0', transition: 'left 0.2s',
-                left: isRestDay ? 22 : 2,
-              }} />
+            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: 4 }}>
+              <X size={18} />
             </button>
           </div>
 
-          {!isRestDay && (
-            <>
-              {editorExs.length > 0 && (
-                <div style={{ marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {editorExs.map((ex, idx) => {
-                    const libEx = exercises.find((e: Exercise) => e.id === ex.exerciseId);
-                    return (
-                      <div
-                        key={idx}
-                        style={{
-                          background: '#111827', border: '1px solid #1e2d4a',
-                          borderRadius: 10, padding: '12px 14px',
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                          <div style={{ flex: 1, position: 'relative' }}>
-                            <select
-                              value={ex.exerciseId}
-                              onChange={e => updateExercise(idx, { exerciseId: e.target.value })}
-                              style={{
-                                ...input, paddingRight: 32, appearance: 'none',
-                                background: '#0d1526', cursor: 'pointer',
-                              }}
-                            >
-                              {exercises.map((e: Exercise) => (
-                                <option key={e.id} value={e.id}>
-                                  {e.name} ({muscleMap[e.primaryMuscleId] ?? e.primaryMuscleId})
-                                </option>
-                              ))}
-                            </select>
-                            <ChevronDown size={14} color="#64748b" style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
-                          </div>
-                          <button
-                            onClick={() => removeExercise(idx)}
-                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: 4, flexShrink: 0 }}
-                          >
-                            <X size={14} />
-                          </button>
-                        </div>
+          {/* ── Scrollable body ── */}
+          <div style={{ overflowY: 'auto', padding: '16px 20px', flex: 1 }}>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-                          {[
-                            { label: 'Séries',    key: 'sets'    as const, min: 1, step: 1   },
-                            { label: 'Reps',      key: 'reps'    as const, min: 1, step: 1   },
-                            { label: 'Carga (kg)',key: 'weight'  as const, min: 0, step: 0.5 },
-                          ].map(({ label, key, min, step }) => (
-                            <div key={key}>
-                              <label style={{ fontSize: 10, color: '#64748b', display: 'block', marginBottom: 3, textAlign: 'center' }}>
-                                {label}
-                              </label>
-                              <input
-                                type="number"
-                                min={min}
-                                step={step}
-                                value={ex[key]}
-                                onChange={e => updateExercise(idx, { [key]: parseFloat(e.target.value) || 0 })}
-                                style={numInput}
-                              />
-                            </div>
-                          ))}
-                        </div>
+            {/* Workout name */}
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 12, color: '#94a3b8', display: 'block', marginBottom: 5, fontWeight: 600 }}>
+                Nome do treino
+              </label>
+              <input
+                value={workoutName}
+                onChange={e => setWorkoutName(e.target.value)}
+                placeholder={DAY_NAMES_FULL[dayOfWeek]}
+                style={input}
+              />
+            </div>
 
-                        {libEx && (
-                          <div style={{ marginTop: 8, fontSize: 11, color: '#64748b' }}>
-                            Músculo: {muscleMap[libEx.primaryMuscleId] ?? libEx.primaryMuscleId}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
+            {/* Rest day toggle */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              background: '#111827', border: '1px solid #1e2d4a', borderRadius: 10,
+              padding: '12px 14px', marginBottom: 16,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Moon size={15} color="#94a3b8" />
+                <span style={{ fontSize: 14, color: '#e2e8f0', fontWeight: 600 }}>Dia de descanso</span>
+              </div>
               <button
-                onClick={addExercise}
+                onClick={() => setIsRestDay(v => !v)}
                 style={{
-                  width: '100%', padding: '10px', borderRadius: 8,
-                  border: '1px dashed #1e2d4a', background: 'transparent',
-                  color: '#7c3aed', fontSize: 13, fontWeight: 700,
-                  cursor: 'pointer', display: 'flex', alignItems: 'center',
-                  justifyContent: 'center', gap: 6, marginBottom: 12,
+                  width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer',
+                  background: isRestDay ? '#7c3aed' : '#1e2d4a',
+                  position: 'relative', transition: 'background 0.2s',
                 }}
               >
-                <Plus size={14} /> Adicionar exercício
+                <span style={{
+                  position: 'absolute', top: 2, width: 20, height: 20,
+                  borderRadius: '50%', background: '#e2e8f0', transition: 'left 0.2s',
+                  left: isRestDay ? 22 : 2,
+                }} />
               </button>
+            </div>
 
-              <div>
-                <label style={{ fontSize: 12, color: '#94a3b8', display: 'block', marginBottom: 5, fontWeight: 600 }}>
-                  Observações (opcional)
-                </label>
-                <textarea
-                  value={notes}
-                  onChange={e => setNotes(e.target.value)}
-                  placeholder="Ex: Foco em hipertrofia, descanso de 90s…"
-                  rows={2}
-                  style={{ ...input, resize: 'vertical', fontFamily: 'inherit' }}
-                />
-              </div>
-            </>
-          )}
-        </div>
+            {!isRestDay && (
+              <>
+                {/* Exercise slots */}
+                {editorExs.length > 0 && (
+                  <div style={{ marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {editorExs.map((ex, idx) => {
+                      const libEx      = exercises.find((e: Exercise) => e.id === ex.exerciseId);
+                      const isCreating = creatingIdx === idx;
 
-        {/* Footer */}
-        <div style={{
-          padding: '14px 20px', borderTop: '1px solid #1e2d4a', flexShrink: 0,
-          display: 'flex', gap: 10,
-        }}>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            style={{
-              flex: 1, padding: '11px', borderRadius: 8, border: 'none',
-              background: saving ? '#3730a3' : 'linear-gradient(135deg, #7c3aed, #6d28d9)',
-              color: 'white', fontWeight: 800, fontSize: 14,
-              cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-            }}
-          >
-            {saving
-              ? <><span style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid #ffffff60', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> Salvando…</>
-              : 'Salvar treino'}
-          </button>
-          <button
-            onClick={onClose}
-            disabled={saving}
-            style={{
-              padding: '11px 18px', borderRadius: 8, border: '1px solid #1e2d4a',
-              background: 'transparent', color: '#94a3b8', fontWeight: 600,
-              fontSize: 14, cursor: 'pointer',
-            }}
-          >
-            Cancelar
-          </button>
+                      return (
+                        <div
+                          key={idx}
+                          style={{
+                            background: '#111827',
+                            border: `1px solid ${isCreating ? '#10b98140' : '#1e2d4a'}`,
+                            borderRadius: 10, padding: '12px 14px',
+                          }}
+                        >
+                          {/* ── Exercise selector OR inline create form ── */}
+                          {isCreating ? (
+                            /* ── Inline create form ── */
+                            <div style={{ marginBottom: 10 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                                <span style={{ fontSize: 13, fontWeight: 700, color: '#10b981' }}>✨ Criar novo exercício</span>
+                                <button
+                                  onClick={() => cancelCreate(idx)}
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, padding: 4 }}
+                                >
+                                  <X size={12} /> Cancelar
+                                </button>
+                              </div>
+
+                              {createError && (
+                                <div style={{ fontSize: 12, color: '#ef4444', marginBottom: 8 }}>{createError}</div>
+                              )}
+
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                {/* Name */}
+                                <input
+                                  style={input}
+                                  placeholder="Nome do exercício *"
+                                  value={newName}
+                                  autoFocus
+                                  onChange={e => { setNewName(e.target.value); setCreateError(''); }}
+                                />
+
+                                {/* Type + Muscle row */}
+                                <div style={{ display: 'grid', gridTemplateColumns: newType === 'cardio' ? '1fr' : '1fr 1fr', gap: 8 }}>
+                                  <div style={{ position: 'relative' }}>
+                                    <select
+                                      style={{ ...input, appearance: 'none', paddingRight: 32, background: '#0d1526', cursor: 'pointer' }}
+                                      value={newType}
+                                      onChange={e => {
+                                        const t = e.target.value as ExerciseType;
+                                        setNewType(t);
+                                        if (t === 'cardio') setNewMuscleId('cardio');
+                                        else if (newMuscleId === 'cardio') setNewMuscleId('');
+                                        setCreateError('');
+                                      }}
+                                    >
+                                      {Object.entries(EXERCISE_TYPE_LABELS).map(([k, v]) => (
+                                        <option key={k} value={k}>{v}</option>
+                                      ))}
+                                    </select>
+                                    <ChevronDown size={13} color="#64748b" style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                                  </div>
+
+                                  {newType !== 'cardio' && (
+                                    <div style={{ position: 'relative' }}>
+                                      <select
+                                        style={{ ...input, appearance: 'none', paddingRight: 32, background: '#0d1526', cursor: 'pointer' }}
+                                        value={newMuscleId}
+                                        onChange={e => { setNewMuscleId(e.target.value); setCreateError(''); }}
+                                      >
+                                        <option value="">Músculo *</option>
+                                        {muscles.filter((m: MuscleGroup) => m.id !== 'cardio').map((m: MuscleGroup) => (
+                                          <option key={m.id} value={m.id}>{m.icon} {m.name}</option>
+                                        ))}
+                                      </select>
+                                      <ChevronDown size={13} color="#64748b" style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Create button */}
+                                <button
+                                  onClick={() => handleCreateForSlot(idx)}
+                                  disabled={creating}
+                                  style={{
+                                    padding: '10px', borderRadius: 8, border: 'none',
+                                    background: creating ? '#065f46' : '#059669',
+                                    color: 'white', fontWeight: 700, fontSize: 13,
+                                    cursor: creating ? 'not-allowed' : 'pointer', opacity: creating ? 0.7 : 1,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                                  }}
+                                >
+                                  {creating
+                                    ? <><span style={{ display: 'inline-block', width: 13, height: 13, border: '2px solid #ffffff60', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> Criando...</>
+                                    : '✓ Criar e Adicionar'}
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            /* ── Library selector ── */
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                              <div style={{ flex: 1, position: 'relative' }}>
+                                <select
+                                  value={ex.exerciseId}
+                                  onChange={e => {
+                                    if (e.target.value === '__new__') { openCreate(idx); }
+                                    else { updateExSlot(idx, { exerciseId: e.target.value }); }
+                                  }}
+                                  style={{ ...input, paddingRight: 32, appearance: 'none', background: '#0d1526', cursor: 'pointer' }}
+                                >
+                                  {exercises.map((e: Exercise) => (
+                                    <option key={e.id} value={e.id}>
+                                      {e.name} ({muscleMap[e.primaryMuscleId] ?? e.primaryMuscleId})
+                                    </option>
+                                  ))}
+                                  <option disabled value="">──────────</option>
+                                  <option value="__new__">✨ Criar novo exercício...</option>
+                                </select>
+                                <ChevronDown size={14} color="#64748b" style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                              </div>
+                              <button
+                                onClick={() => removeSlot(idx)}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: 4, flexShrink: 0 }}
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          )}
+
+                          {/* ── Sets / reps / weight (always shown) ── */}
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                            {[
+                              { label: 'Séries',     key: 'sets'   as const, min: 1, step: 1   },
+                              { label: 'Reps',       key: 'reps'   as const, min: 1, step: 1   },
+                              { label: 'Carga (kg)', key: 'weight' as const, min: 0, step: 0.5 },
+                            ].map(({ label, key, min, step }) => (
+                              <div key={key}>
+                                <label style={{ fontSize: 10, color: '#64748b', display: 'block', marginBottom: 3, textAlign: 'center' }}>
+                                  {label}
+                                </label>
+                                <input
+                                  type="number" min={min} step={step}
+                                  value={ex[key]}
+                                  onChange={e => updateExSlot(idx, { [key]: parseFloat(e.target.value) || 0 })}
+                                  style={numInput}
+                                />
+                              </div>
+                            ))}
+                          </div>
+
+                          {libEx && !isCreating && (
+                            <div style={{ marginTop: 8, fontSize: 11, color: '#64748b' }}>
+                              Músculo: {muscleMap[libEx.primaryMuscleId] ?? libEx.primaryMuscleId}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <button
+                  onClick={addSlot}
+                  style={{
+                    width: '100%', padding: '10px', borderRadius: 8,
+                    border: '1px dashed #1e2d4a', background: 'transparent',
+                    color: '#7c3aed', fontSize: 13, fontWeight: 700,
+                    cursor: 'pointer', display: 'flex', alignItems: 'center',
+                    justifyContent: 'center', gap: 6, marginBottom: 12,
+                  }}
+                >
+                  <Plus size={14} /> Adicionar exercício
+                </button>
+
+                <div>
+                  <label style={{ fontSize: 12, color: '#94a3b8', display: 'block', marginBottom: 5, fontWeight: 600 }}>
+                    Observações (opcional)
+                  </label>
+                  <textarea
+                    value={notes}
+                    onChange={e => setNotes(e.target.value)}
+                    placeholder="Ex: Foco em hipertrofia, descanso de 90s…"
+                    rows={2}
+                    style={{ ...input, resize: 'vertical', fontFamily: 'inherit' }}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* ── Fixed footer ── */}
+          <div style={{
+            padding: '14px 20px', borderTop: '1px solid #1e2d4a', flexShrink: 0,
+            display: 'flex', gap: 10,
+            paddingBottom: 'max(14px, env(safe-area-inset-bottom))',
+          }}>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              style={{
+                flex: 1, padding: '11px', borderRadius: 8, border: 'none',
+                background: saving ? '#3730a3' : 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+                color: 'white', fontWeight: 800, fontSize: 14,
+                cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              }}
+            >
+              {saving
+                ? <><span style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid #ffffff60', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> Salvando…</>
+                : 'Salvar treino'}
+            </button>
+            <button
+              onClick={onClose}
+              disabled={saving}
+              style={{
+                padding: '11px 18px', borderRadius: 8, border: '1px solid #1e2d4a',
+                background: 'transparent', color: '#94a3b8', fontWeight: 600,
+                fontSize: 14, cursor: 'pointer',
+              }}
+            >
+              Cancelar
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
