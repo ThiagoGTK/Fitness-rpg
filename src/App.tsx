@@ -11,6 +11,7 @@ import { HistoryPage } from './pages/HistoryPage';
 import { AchievementsPage } from './pages/AchievementsPage';
 import { RecordsPage } from './pages/RecordsPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { WeeklyPlanPage } from './pages/WeeklyPlanPage';
 import { useAuthStore } from './store/authStore';
 
 export default function App() {
@@ -181,6 +182,7 @@ export default function App() {
           <Route path="/achievements" element={<AchievementsPage />} />
           <Route path="/records"      element={<RecordsPage />} />
           <Route path="/profile"      element={<ProfilePage />} />
+          <Route path="/weekly"       element={<WeeklyPlanPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

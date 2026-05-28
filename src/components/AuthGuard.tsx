@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Outlet, Navigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useGameStore } from '../store/gameStore';
+import { useWeeklyStore } from '../store/weeklyStore';
 import { Navigation } from './Navigation';
 import { LevelUpModal } from './ui/LevelUpModal';
 import { ProfileSetupPage } from '../pages/ProfileSetupPage';
@@ -39,21 +40,24 @@ function LoadingScreen() {
 export function AuthGuard() {
   const { user: authUser, loading: authLoading, initialized: authInitialized } = useAuthStore();
   const { initialized: gameInitialized, loading: gameLoading, initData, clearData, user: gameUser } = useGameStore();
+  const { initialized: weeklyInitialized, loading: weeklyLoading, initWeekly, clearWeekly } = useWeeklyStore();
 
   // Track which user's data is currently loaded
   const loadedUserId = useRef<string | null>(null);
 
   useEffect(() => {
-    // 1. User logged out → wipe game state
+    // 1. User logged out → wipe game + weekly state
     if (!authUser) {
-      if (gameInitialized) clearData();
+      if (gameInitialized)   clearData();
+      if (weeklyInitialized) clearWeekly();
       loadedUserId.current = null;
       return;
     }
 
     // 2. User ID changed (different account logged in) → wipe first, re-init next render
     if (loadedUserId.current !== null && loadedUserId.current !== authUser.id) {
-      clearData();                 // sets initialized = false → triggers another render
+      clearData();    // sets gameInitialized = false → triggers another render
+      clearWeekly();  // sets weeklyInitialized = false
       loadedUserId.current = null;
       return;
     }
@@ -63,7 +67,10 @@ export function AuthGuard() {
       loadedUserId.current = authUser.id;
       initData(authUser.id);
     }
-  }, [authUser, gameInitialized, gameLoading]);
+    if (!weeklyInitialized && !weeklyLoading) {
+      initWeekly(authUser.id);
+    }
+  }, [authUser, gameInitialized, gameLoading, weeklyInitialized, weeklyLoading]);
 
   // 1. Still establishing session
   if (!authInitialized || authLoading) return <LoadingScreen />;

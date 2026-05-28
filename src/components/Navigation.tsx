@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Dumbbell, List, PlusCircle, History,
-  Trophy, Target, Zap, Trash2, X, LogOut, User,
+  Trophy, Target, CalendarDays, Zap, Trash2, X, LogOut, User,
 } from 'lucide-react';
 import { useGameStore } from '../store/gameStore';
 import { useAuthStore } from '../store/authStore';
@@ -16,6 +16,7 @@ const NAV = [
   { to: '/history',     icon: History,         label: 'Histórico' },
   { to: '/achievements',icon: Trophy,          label: 'Conquistas'},
   { to: '/records',     icon: Target,          label: 'Recordes'  },
+  { to: '/weekly',      icon: CalendarDays,    label: 'Semanal'   },
 ];
 
 export function Navigation() {

@@ -170,6 +170,19 @@ export const useGameStore = create<GameStore>()((set, get) => ({
 
     // User profile
     const p = profileRes.data;
+
+    // PGRST116 (406) = no row found. Could be a genuine new user OR an unauthenticated
+    // race condition (authUser set in React state while Supabase was still clearing the
+    // session from a concurrent signOut). Disambiguate by re-checking the session.
+    if (!p && profileRes.error?.code === 'PGRST116') {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session || session.user.id !== userId) {
+        console.warn('[initData] PGRST116 with no valid session — aborting (race condition)');
+        set({ loading: false }); // leave initialized: false so AuthGuard retries on next render
+        return;
+      }
+    }
+
     const user: UserProfile = p ? {
       name: (p.name as string) ?? '',
       joinedAt: (p.joined_at as string) ?? new Date().toISOString(),
