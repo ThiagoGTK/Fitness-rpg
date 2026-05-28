@@ -79,10 +79,34 @@ function EntryCard({ entry, index, exercises, muscles, onUpdate, onRemove, prevS
   }
 
   const exercise = exercises.find(e => e.id === entry.exerciseId);
-  const primaryMuscle = exercise ? muscles.find(m => m.id === exercise.primaryMuscleId) : null;
-  const isCardio = exercise?.primaryMuscleId === 'cardio';
+
+  // While the inline "create" form is open, use the new type/muscle being configured
+  // so that the card UI (cardio/non-cardio layout, XP preview) reflects the new exercise
+  // instead of whatever was previously selected.
+  const isCardio = isCreating
+    ? newType === 'cardio'
+    : exercise?.primaryMuscleId === 'cardio';
+
+  const primaryMuscle = isCreating
+    ? (muscles.find(m => m.id === newMuscleId) ?? null)
+    : (exercise ? muscles.find(m => m.id === exercise.primaryMuscleId) : null);
+
   const volume = calcVolume(entry.sets);
-  const xpPreview = exercise ? calculateEntryXP(entry, exercise, prevSessions).exerciseXP : 0;
+
+  // XP preview: use actual exercise when saved; while creating, give a provisional
+  // estimate so the user can see the value before clicking "Criar e Adicionar".
+  const xpPreview = (() => {
+    if (exercise) return calculateEntryXP(entry, exercise, prevSessions).exerciseXP;
+    if (isCreating && newType === 'cardio' && (entry.duration || entry.sets.length > 0)) {
+      const provisional: Exercise = {
+        id: '', name: newName, primaryMuscleId: 'cardio',
+        secondaryMuscles: [], type: 'cardio', notes: '',
+        level: 1, currentXP: 0, totalXPEarned: 0, timesPerformed: 0, createdAt: '',
+      };
+      return calculateEntryXP(entry, provisional, []).exerciseXP;
+    }
+    return 0;
+  })();
 
   return (
     <div className="game-card" style={{ padding: '14px 16px' }}>
