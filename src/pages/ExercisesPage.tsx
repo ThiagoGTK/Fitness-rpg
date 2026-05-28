@@ -63,98 +63,148 @@ function ExerciseModal({ exercise, onClose }: { exercise?: Exercise; onClose: ()
   }
 
   return (
-    <div className="modal-backdrop" style={{
-      position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,0.75)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
-    }} onClick={onClose}>
-      <div className="modal-content game-card" style={{ maxWidth: 540, width: '100%', padding: 28, maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <h2 style={{ margin: 0, fontSize: 18, color: '#f1f5f9' }}>
-            {exercise ? 'Editar Exercício' : 'Novo Exercício'}
-          </h2>
-          <button className="btn-ghost" onClick={onClose} style={{ padding: '6px' }}><X size={18} /></button>
-        </div>
+    <>
+      {/* Responsive modal: bottom-sheet on mobile, centered on desktop */}
+      <style>{`
+        .ex-modal-backdrop {
+          position: fixed; inset: 0; z-index: 200;
+          background: rgba(0,0,0,0.75);
+          display: flex; align-items: flex-end; justify-content: center;
+          padding: 0;
+        }
+        .ex-modal-box {
+          background: #111827; border: 1px solid #1e2d4a;
+          border-radius: 20px 20px 0 0;
+          width: 100%; max-width: 100%;
+          max-height: 92vh;
+          display: flex; flex-direction: column;
+          box-shadow: 0 -8px 40px rgba(0,0,0,0.5);
+        }
+        @media (min-width: 640px) {
+          .ex-modal-backdrop { align-items: center; padding: 16px; }
+          .ex-modal-box {
+            border-radius: 16px; max-width: 540px;
+            box-shadow: 0 24px 60px rgba(0,0,0,0.7);
+          }
+        }
+      `}</style>
 
-        {error && <div style={{ background: '#ef444420', border: '1px solid #ef444440', borderRadius: 8, padding: '8px 12px', fontSize: 13, color: '#ef4444', marginBottom: 14 }}>{error}</div>}
+      <div className="ex-modal-backdrop" onClick={onClose}>
+        <div className="ex-modal-box" onClick={e => e.stopPropagation()}>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div>
-            <label style={{ display: 'block', fontSize: 13, color: '#94a3b8', marginBottom: 6 }}>Nome *</label>
-            <input className="game-input" placeholder="Ex: Supino Reto" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+          {/* ── Fixed header ── */}
+          <div style={{
+            padding: '16px 20px 14px', borderBottom: '1px solid #1e2d4a',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            flexShrink: 0,
+          }}>
+            {/* drag handle (mobile visual cue) */}
+            <div style={{ position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', width: 36, height: 4, borderRadius: 2, background: '#1e2d4a' }} />
+            <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: '#f1f5f9' }}>
+              {exercise ? 'Editar Exercício' : 'Novo Exercício'}
+            </h2>
+            <button className="btn-ghost" onClick={onClose} style={{ padding: '6px' }}><X size={18} /></button>
           </div>
 
-          {form.type !== 'cardio' && (
-            <div>
-              <label style={{ display: 'block', fontSize: 13, color: '#94a3b8', marginBottom: 6 }}>Músculo principal *</label>
-              <select className="game-input" value={form.primaryMuscleId} onChange={e => setForm(f => ({ ...f, primaryMuscleId: e.target.value }))}>
-                <option value="">Selecione...</option>
-                {muscles.filter(m => m.id !== 'cardio').map(m => <option key={m.id} value={m.id}>{m.icon} {m.name}</option>)}
-              </select>
-            </div>
-          )}
+          {/* ── Scrollable body ── */}
+          <div style={{ overflowY: 'auto', padding: '16px 20px', flex: 1 }}>
+            {error && (
+              <div style={{
+                background: '#ef444420', border: '1px solid #ef444440',
+                borderRadius: 8, padding: '8px 12px', fontSize: 13,
+                color: '#ef4444', marginBottom: 14,
+              }}>{error}</div>
+            )}
 
-          <div>
-            <label style={{ display: 'block', fontSize: 13, color: '#94a3b8', marginBottom: 6 }}>Tipo</label>
-            <select className="game-input" value={form.type} onChange={e => setForm(f => ({
-              ...f,
-              type: e.target.value as ExerciseType,
-              // cardio usa categoria própria; outros tipos limpam se tinham 'cardio'
-              primaryMuscleId: e.target.value === 'cardio'
-                ? 'cardio'
-                : f.primaryMuscleId === 'cardio' ? '' : f.primaryMuscleId,
-            }))}>
-              {Object.entries(EXERCISE_TYPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-            </select>
-          </div>
-
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-              <label style={{ fontSize: 13, color: '#94a3b8' }}>Músculos secundários</label>
-              <button className="btn-ghost" style={{ fontSize: 12, padding: '4px 8px' }} onClick={addSecondary}>
-                <Plus size={12} /> Adicionar
-              </button>
-            </div>
-            {form.secondaryMuscles.map((sm, i) => (
-              <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
-                <select className="game-input" style={{ flex: 2 }} value={sm.muscleId}
-                  onChange={e => updateSecondary(i, 'muscleId', e.target.value)}>
-                  {muscles.filter(m => m.id !== form.primaryMuscleId).map(m =>
-                    <option key={m.id} value={m.id}>{m.icon} {m.name}</option>)}
-                </select>
-                <input className="game-input" style={{ flex: 1 }} type="number" min={5} max={100}
-                  value={sm.xpPercentage} onChange={e => updateSecondary(i, 'xpPercentage', e.target.value)}
-                  placeholder="% XP" />
-                <span style={{ fontSize: 11, color: '#64748b', whiteSpace: 'nowrap' }}>% XP</span>
-                <button className="btn-ghost" style={{ padding: '6px', flexShrink: 0 }} onClick={() => removeSecondary(i)}>
-                  <X size={14} />
-                </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 13, color: '#94a3b8', marginBottom: 6 }}>Nome *</label>
+                <input className="game-input" placeholder="Ex: Supino Reto" value={form.name}
+                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
               </div>
-            ))}
+
+              <div>
+                <label style={{ display: 'block', fontSize: 13, color: '#94a3b8', marginBottom: 6 }}>Tipo</label>
+                <select className="game-input" value={form.type} onChange={e => setForm(f => ({
+                  ...f,
+                  type: e.target.value as ExerciseType,
+                  primaryMuscleId: e.target.value === 'cardio'
+                    ? 'cardio'
+                    : f.primaryMuscleId === 'cardio' ? '' : f.primaryMuscleId,
+                }))}>
+                  {Object.entries(EXERCISE_TYPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                </select>
+              </div>
+
+              {form.type !== 'cardio' && (
+                <div>
+                  <label style={{ display: 'block', fontSize: 13, color: '#94a3b8', marginBottom: 6 }}>Músculo principal *</label>
+                  <select className="game-input" value={form.primaryMuscleId}
+                    onChange={e => setForm(f => ({ ...f, primaryMuscleId: e.target.value }))}>
+                    <option value="">Selecione...</option>
+                    {muscles.filter(m => m.id !== 'cardio').map(m =>
+                      <option key={m.id} value={m.id}>{m.icon} {m.name}</option>)}
+                  </select>
+                </div>
+              )}
+
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <label style={{ fontSize: 13, color: '#94a3b8' }}>Músculos secundários</label>
+                  <button className="btn-ghost" style={{ fontSize: 12, padding: '4px 8px' }} onClick={addSecondary}>
+                    <Plus size={12} /> Adicionar
+                  </button>
+                </div>
+                {form.secondaryMuscles.map((sm, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
+                    <select className="game-input" style={{ flex: 2 }} value={sm.muscleId}
+                      onChange={e => updateSecondary(i, 'muscleId', e.target.value)}>
+                      {muscles.filter(m => m.id !== form.primaryMuscleId).map(m =>
+                        <option key={m.id} value={m.id}>{m.icon} {m.name}</option>)}
+                    </select>
+                    <input className="game-input" style={{ flex: 1 }} type="number" min={5} max={100}
+                      value={sm.xpPercentage}
+                      onChange={e => updateSecondary(i, 'xpPercentage', e.target.value)}
+                      placeholder="% XP" />
+                    <span style={{ fontSize: 11, color: '#64748b', whiteSpace: 'nowrap' }}>% XP</span>
+                    <button className="btn-ghost" style={{ padding: '6px', flexShrink: 0 }} onClick={() => removeSecondary(i)}>
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: 13, color: '#94a3b8', marginBottom: 6 }}>Observações</label>
+                <textarea className="game-input" rows={2} placeholder="Notas sobre o exercício..."
+                  value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+                  style={{ resize: 'vertical' }} />
+              </div>
+            </div>
           </div>
 
-          <div>
-            <label style={{ display: 'block', fontSize: 13, color: '#94a3b8', marginBottom: 6 }}>Observações</label>
-            <textarea className="game-input" rows={2} placeholder="Notas sobre o exercício..." value={form.notes}
-              onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} style={{ resize: 'vertical' }} />
+          {/* ── Fixed footer ── */}
+          <div style={{
+            padding: '14px 20px', borderTop: '1px solid #1e2d4a',
+            display: 'flex', gap: 10, flexShrink: 0,
+            paddingBottom: 'max(14px, env(safe-area-inset-bottom))',
+          }}>
+            <button
+              className="btn-primary"
+              style={{ flex: 1, justifyContent: 'center', opacity: saving ? 0.7 : 1 }}
+              onClick={handleSubmit}
+              disabled={saving}
+            >
+              {saving
+                ? <><span style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid #ffffff60', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> Salvando...</>
+                : <><Save size={15} /> Salvar</>
+              }
+            </button>
+            <button className="btn-secondary" onClick={onClose} disabled={saving}>Cancelar</button>
           </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-          <button
-            className="btn-primary"
-            style={{ flex: 1, justifyContent: 'center', opacity: saving ? 0.7 : 1 }}
-            onClick={handleSubmit}
-            disabled={saving}
-          >
-            {saving
-              ? <><span style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid #ffffff60', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> Salvando...</>
-              : <><Save size={15} /> Salvar</>
-            }
-          </button>
-          <button className="btn-secondary" onClick={onClose} disabled={saving}>Cancelar</button>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
