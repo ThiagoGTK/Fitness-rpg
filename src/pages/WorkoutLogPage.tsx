@@ -93,19 +93,24 @@ function EntryCard({ entry, index, exercises, muscles, onUpdate, onRemove, prevS
 
   const volume = calcVolume(entry.sets);
 
-  // XP preview: use actual exercise when saved; while creating, give a provisional
-  // estimate so the user can see the value before clicking "Criar e Adicionar".
+  // XP preview.
+  // IMPORTANT: check isCreating FIRST. When isCreating=true the entry still has
+  // exerciseId = exercises[0] (the default), so `exercise` is truthy — but it's a
+  // strength exercise. Using it would give 0 XP (no sets). We must bypass it and
+  // use a provisional cardio exercise instead.
   const xpPreview = (() => {
-    if (exercise) return calculateEntryXP(entry, exercise, prevSessions).exerciseXP;
-    if (isCreating && newType === 'cardio' && (entry.duration || entry.sets.length > 0)) {
-      const provisional: Exercise = {
-        id: '', name: newName, primaryMuscleId: 'cardio',
-        secondaryMuscles: [], type: 'cardio', notes: '',
-        level: 1, currentXP: 0, totalXPEarned: 0, timesPerformed: 0, createdAt: '',
-      };
-      return calculateEntryXP(entry, provisional, []).exerciseXP;
+    if (isCreating) {
+      if (newType === 'cardio' && (entry.duration || entry.sets.length > 0)) {
+        const provisional: Exercise = {
+          id: '', name: newName, primaryMuscleId: 'cardio',
+          secondaryMuscles: [], type: 'cardio', notes: '',
+          level: 1, currentXP: 0, totalXPEarned: 0, timesPerformed: 0, createdAt: '',
+        };
+        return calculateEntryXP(entry, provisional, []).exerciseXP;
+      }
+      return 0; // non-cardio creation: need sets to estimate
     }
-    return 0;
+    return exercise ? calculateEntryXP(entry, exercise, prevSessions).exerciseXP : 0;
   })();
 
   return (
