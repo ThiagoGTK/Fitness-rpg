@@ -24,6 +24,7 @@ const BREVO_API_KEY            = Deno.env.get('BREVO_API_KEY')!
 const FROM_NAME  = 'FitRPG'
 const FROM_EMAIL = 'thiago.gaitkoski@gmail.com'
 const APP_URL    = 'https://fitness-rpg-eight.vercel.app'
+const LOG_URL    = 'https://fitness-rpg-eight.vercel.app/log'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -87,7 +88,7 @@ function templateStreakRisk(name: string, streak: number): { subject: string; ht
 
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr><td align="center">
-                  <a href="${APP_URL}" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:15px 36px;border-radius:12px;letter-spacing:0.3px;">
+                  <a href="${LOG_URL}" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:15px 36px;border-radius:12px;letter-spacing:0.3px;">
                     Treinar agora e salvar meu streak 🔥
                   </a>
                 </td></tr>
@@ -172,7 +173,7 @@ function templateNewUser3d(name: string): { subject: string; html: string } {
 
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr><td align="center">
-                  <a href="${APP_URL}" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:15px 36px;border-radius:12px;letter-spacing:0.3px;">
+                  <a href="${LOG_URL}" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:15px 36px;border-radius:12px;letter-spacing:0.3px;">
                     Fazer meu primeiro treino agora ⚔️
                   </a>
                 </td></tr>
@@ -244,7 +245,7 @@ function templateNewUser7d(name: string): { subject: string; html: string } {
 
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr><td align="center">
-                  <a href="${APP_URL}" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:15px 36px;border-radius:12px;letter-spacing:0.3px;">
+                  <a href="${LOG_URL}" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:15px 36px;border-radius:12px;letter-spacing:0.3px;">
                     Entrar na aventura agora 🧙
                   </a>
                 </td></tr>

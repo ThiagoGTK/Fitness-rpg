@@ -9,8 +9,9 @@ const SUPABASE_URL              = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const BREVO_API_KEY             = Deno.env.get('BREVO_API_KEY')!
 
-const FROM_NAME  = 'FitRPG'
-const FROM_EMAIL = 'thiago.gaitkoski@gmail.com'
+const FROM_NAME   = 'FitRPG'
+const FROM_EMAIL  = 'thiago.gaitkoski@gmail.com'
+const LOG_URL     = 'https://fitness-rpg-eight.vercel.app/log'
 const APP_URL    = 'https://fitness-rpg-eight.vercel.app'
 
 function buildHtml(name: string): string {
@@ -97,7 +98,7 @@ function buildHtml(name: string): string {
               <!-- CTA -->
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr><td align="center">
-                  <a href="${APP_URL}" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:15px 36px;border-radius:12px;letter-spacing:0.3px;">
+                  <a href="${LOG_URL}" style="display:inline-block;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:15px 36px;border-radius:12px;letter-spacing:0.3px;">
                     Registrar meu treino de hoje ⚔️
                   </a>
                 </td></tr>
