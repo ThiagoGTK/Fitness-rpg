@@ -26,19 +26,42 @@ function toISO(d: Date): string {
   return `${y}-${m}-${dd}`;
 }
 
-function formatDisplay(iso: string): string {
-  const today = toISO(new Date());
-  const yesterday = toISO(new Date(Date.now() - 86400000));
-  if (iso === today) return 'Hoje';
-  if (iso === yesterday) return 'Ontem';
-  const d = parseLocal(iso);
-  return d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+/** YYYY-MM-DD → dd-mm-aaaa */
+function isoToDMY(iso: string): string {
+  if (!iso || iso.length < 10) return '';
+  const [y, m, d] = iso.split('-');
+  return `${d}-${m}-${y}`;
+}
+
+/** dd-mm-aaaa → YYYY-MM-DD, returns null if date doesn't exist */
+function parseDMY(dmy: string): string | null {
+  const match = dmy.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  if (!match) return null;
+  const [, dd, mm, yyyy] = match;
+  const d = Number(dd), mo = Number(mm), y = Number(yyyy);
+  if (mo < 1 || mo > 12) return null;
+  if (d < 1) return null;
+  if (y < 1900 || y > 2100) return null;
+  // Check the date actually exists (handles 31-02, 29-02 on non-leap years, etc.)
+  const date = new Date(y, mo - 1, d);
+  if (date.getFullYear() !== y || date.getMonth() !== mo - 1 || date.getDate() !== d) return null;
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+/** Auto-apply dd-mm-aaaa mask to a string of digits */
+function applyMask(raw: string): string {
+  const digits = raw.replace(/\D/g, '').slice(0, 8);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}-${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}-${digits.slice(2, 4)}-${digits.slice(4)}`;
 }
 
 export function DatePickerInput({ value, onChange, max, label }: Props) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen]         = useState(false);
   const [viewYear, setViewYear]   = useState(() => parseLocal(value).getFullYear());
   const [viewMonth, setViewMonth] = useState(() => parseLocal(value).getMonth());
+  const [rawInput, setRawInput]   = useState(() => isoToDMY(value));
+  const [inputError, setInputError] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Close on outside click
@@ -52,49 +75,95 @@ export function DatePickerInput({ value, onChange, max, label }: Props) {
     return () => document.removeEventListener('mousedown', onDown);
   }, []);
 
-  // Sync view with value when value changes externally
+  // Sync text input and calendar view when external value changes (calendar click, quick buttons)
   useEffect(() => {
+    setRawInput(isoToDMY(value));
+    setInputError('');
     const d = parseLocal(value);
     setViewYear(d.getFullYear());
     setViewMonth(d.getMonth());
   }, [value]);
 
   const maxDate = max ? parseLocal(max) : new Date();
+  const maxISO  = toISO(maxDate);
+
+  // ── Text input handlers ───────────────────────────────────────────────────
+
+  function handleTextChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const prev = rawInput;
+    const next = e.target.value;
+    const isDeleting = next.length < prev.length;
+
+    if (isDeleting) {
+      // Allow free deletion without re-inserting separators
+      setRawInput(next);
+      setInputError('');
+      return;
+    }
+
+    const masked = applyMask(next);
+    setRawInput(masked);
+    setInputError('');
+
+    // Validate when all 8 digits are present
+    const digits = masked.replace(/\D/g, '');
+    if (digits.length === 8) {
+      const iso = parseDMY(masked);
+      if (!iso) {
+        setInputError('Data inválida');
+      } else if (iso > maxISO) {
+        setInputError('Data não permitida');
+      } else {
+        onChange(iso);
+        setInputError('');
+        setOpen(false);
+      }
+    }
+  }
+
+  function handleBlur() {
+    // If partial input, revert to last valid value
+    const digits = rawInput.replace(/\D/g, '');
+    if (digits.length > 0 && digits.length < 8) {
+      setRawInput(isoToDMY(value));
+      setInputError('');
+    }
+  }
+
+  // ── Calendar ──────────────────────────────────────────────────────────────
 
   function prevMonth() {
     if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); }
     else setViewMonth(m => m - 1);
   }
   function nextMonth() {
-    // Don't navigate past the month that contains maxDate
-    const maxY = maxDate.getFullYear();
-    const maxM = maxDate.getMonth();
+    const maxY = maxDate.getFullYear(), maxM = maxDate.getMonth();
     if (viewYear > maxY || (viewYear === maxY && viewMonth >= maxM)) return;
     if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); }
     else setViewMonth(m => m + 1);
   }
 
-  // Build day grid
-  const firstDay = new Date(viewYear, viewMonth, 1).getDay(); // 0=Sun
+  const firstDay   = new Date(viewYear, viewMonth, 1).getDay();
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
   const cells: (number | null)[] = [
     ...Array(firstDay).fill(null),
     ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
   ];
-  // Pad to complete last row
   while (cells.length % 7 !== 0) cells.push(null);
 
   const selectedISO = value;
-  const todayISO = toISO(new Date());
+  const todayISO    = toISO(new Date());
 
   function selectDay(day: number) {
     const iso = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    if (iso > toISO(maxDate)) return;
+    if (iso > maxISO) return;
     onChange(iso);
     setOpen(false);
   }
 
   const canGoNext = !(viewYear === maxDate.getFullYear() && viewMonth >= maxDate.getMonth());
+
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <div ref={containerRef} style={{ position: 'relative' }}>
@@ -104,23 +173,64 @@ export function DatePickerInput({ value, onChange, max, label }: Props) {
         </label>
       )}
 
-      {/* Trigger button */}
-      <button
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        style={{
-          width: '100%', display: 'flex', alignItems: 'center', gap: 8,
-          background: '#0d1526', border: `1px solid ${open ? '#7c3aed' : '#1e2d4a'}`,
-          borderRadius: 8, padding: '10px 14px', cursor: 'pointer',
-          color: '#e2e8f0', fontSize: 14, textAlign: 'left',
-          boxShadow: open ? '0 0 0 3px rgba(124,58,237,0.15)' : 'none',
-          transition: 'border-color 0.2s, box-shadow 0.2s',
-        }}
-      >
-        <Calendar size={15} color="#7c3aed" style={{ flexShrink: 0 }} />
-        <span style={{ flex: 1 }}>{formatDisplay(value)}</span>
-        <span style={{ fontSize: 11, color: '#475569' }}>{value}</span>
-      </button>
+      {/* Input row: text field + calendar button */}
+      <div style={{
+        display: 'flex', alignItems: 'center',
+        background: '#0d1526',
+        border: `1px solid ${inputError ? '#ef4444' : open ? '#7c3aed' : '#1e2d4a'}`,
+        borderRadius: 8, overflow: 'hidden',
+        boxShadow: open
+          ? '0 0 0 3px rgba(124,58,237,0.15)'
+          : inputError
+            ? '0 0 0 2px rgba(239,68,68,0.15)'
+            : 'none',
+        transition: 'border-color 0.2s, box-shadow 0.2s',
+      }}>
+        <input
+          type="text"
+          inputMode="numeric"
+          value={rawInput}
+          onChange={handleTextChange}
+          onBlur={handleBlur}
+          placeholder="dd-mm-aaaa"
+          maxLength={10}
+          style={{
+            flex: 1,
+            background: 'transparent',
+            border: 'none',
+            outline: 'none',
+            padding: '10px 14px',
+            fontSize: 14,
+            color: '#e2e8f0',
+            fontFamily: 'monospace',
+            letterSpacing: '0.05em',
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => setOpen(o => !o)}
+          title="Abrir calendário"
+          style={{
+            background: 'none',
+            border: 'none',
+            borderLeft: '1px solid #1e2d4a',
+            padding: '10px 12px',
+            cursor: 'pointer',
+            lineHeight: 0,
+            color: open ? '#a855f7' : '#7c3aed',
+            transition: 'color 0.15s',
+          }}
+        >
+          <Calendar size={16} />
+        </button>
+      </div>
+
+      {/* Validation error */}
+      {inputError && (
+        <div style={{ fontSize: 12, color: '#ef4444', marginTop: 4 }}>
+          ⚠ {inputError}
+        </div>
+      )}
 
       {/* Calendar popup */}
       {open && (
@@ -132,7 +242,7 @@ export function DatePickerInput({ value, onChange, max, label }: Props) {
           animation: 'fadeInUp 0.15s ease-out',
         }}>
 
-          {/* Month/year header */}
+          {/* Month / year navigation */}
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10 }}>
             <button type="button" onClick={prevMonth} style={{
               background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8',
@@ -147,7 +257,8 @@ export function DatePickerInput({ value, onChange, max, label }: Props) {
               {MONTHS[viewMonth]} {viewYear}
             </span>
             <button type="button" onClick={nextMonth} style={{
-              background: 'none', border: 'none', cursor: canGoNext ? 'pointer' : 'not-allowed',
+              background: 'none', border: 'none',
+              cursor: canGoNext ? 'pointer' : 'not-allowed',
               color: canGoNext ? '#94a3b8' : '#1e2d4a',
               padding: '4px 6px', borderRadius: 6, lineHeight: 0,
             }}
@@ -161,7 +272,10 @@ export function DatePickerInput({ value, onChange, max, label }: Props) {
           {/* Weekday headers */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: 4 }}>
             {WEEKDAYS.map((d, i) => (
-              <div key={i} style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, color: '#475569', padding: '2px 0' }}>
+              <div key={i} style={{
+                textAlign: 'center', fontSize: 11, fontWeight: 700,
+                color: '#475569', padding: '2px 0',
+              }}>
                 {d}
               </div>
             ))}
@@ -173,8 +287,8 @@ export function DatePickerInput({ value, onChange, max, label }: Props) {
               if (day === null) return <div key={idx} />;
               const iso = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
               const isSelected = iso === selectedISO;
-              const isToday = iso === todayISO;
-              const isFuture = iso > toISO(maxDate);
+              const isToday    = iso === todayISO;
+              const isFuture   = iso > maxISO;
 
               return (
                 <button
@@ -183,19 +297,18 @@ export function DatePickerInput({ value, onChange, max, label }: Props) {
                   disabled={isFuture}
                   onClick={() => selectDay(day)}
                   style={{
-                    padding: '6px 2px', borderRadius: 6, border: 'none', cursor: isFuture ? 'not-allowed' : 'pointer',
-                    fontSize: 13, fontWeight: isSelected || isToday ? 700 : 400, textAlign: 'center',
+                    padding: '6px 2px', borderRadius: 6, border: 'none',
+                    cursor: isFuture ? 'not-allowed' : 'pointer',
+                    fontSize: 13,
+                    fontWeight: isSelected || isToday ? 700 : 400,
+                    textAlign: 'center',
                     background: isSelected ? '#7c3aed' : 'transparent',
                     color: isFuture ? '#1e2d4a' : isSelected ? '#fff' : isToday ? '#a855f7' : '#cbd5e1',
                     outline: isToday && !isSelected ? '1px solid #7c3aed40' : 'none',
                     transition: 'background 0.1s, color 0.1s',
                   }}
-                  onMouseEnter={e => {
-                    if (!isFuture && !isSelected) e.currentTarget.style.background = '#1e2d4a';
-                  }}
-                  onMouseLeave={e => {
-                    if (!isSelected) e.currentTarget.style.background = 'transparent';
-                  }}
+                  onMouseEnter={e => { if (!isFuture && !isSelected) e.currentTarget.style.background = '#1e2d4a'; }}
+                  onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent'; }}
                 >
                   {day}
                 </button>
@@ -203,7 +316,7 @@ export function DatePickerInput({ value, onChange, max, label }: Props) {
             })}
           </div>
 
-          {/* Quick buttons */}
+          {/* Quick: Hoje / Ontem */}
           <div style={{ display: 'flex', gap: 6, marginTop: 10, paddingTop: 10, borderTop: '1px solid #1e2d4a' }}>
             {([
               { label: 'Hoje',  days: 0 },
