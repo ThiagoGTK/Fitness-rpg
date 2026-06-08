@@ -7,7 +7,7 @@
  *   Group 3 – streak = 0  AND last_trained_date IS NULL  AND joined exactly 7 days ago
  *
  * Required secret (Supabase Dashboard → Settings → Edge Functions → Secrets):
- *   RESEND_API_KEY
+ *   BREVO_API_KEY
  *
  * Auto-injected by Supabase (no action needed):
  *   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
@@ -19,12 +19,10 @@ import { createClient } from '@supabase/supabase-js'
 
 const SUPABASE_URL             = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-const RESEND_API_KEY           = Deno.env.get('RESEND_API_KEY')!
+const BREVO_API_KEY            = Deno.env.get('BREVO_API_KEY')!
 
-/** Change to your verified Resend sender domain before going live.
- *  For testing you can use the Resend sandbox: 'onboarding@resend.dev'
- *  (only sends to the account owner's email). */
-const FROM_EMAIL = 'FitRPG <onboarding@resend.dev>'
+const FROM_NAME  = 'FitRPG'
+const FROM_EMAIL = 'thiago.gaitkoski@gmail.com'
 const APP_URL    = 'https://fitness-rpg-eight.vercel.app'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -275,13 +273,18 @@ function templateNewUser7d(name: string): { subject: string; html: string } {
 
 async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
   try {
-    const res = await fetch('https://api.resend.com/emails', {
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${RESEND_API_KEY}`,
+        'api-key': BREVO_API_KEY,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ from: FROM_EMAIL, to: [to], subject, html }),
+      body: JSON.stringify({
+        sender: { name: FROM_NAME, email: FROM_EMAIL },
+        to: [{ email: to }],
+        subject,
+        htmlContent: html,
+      }),
     })
     if (!res.ok) {
       const body = await res.text()
