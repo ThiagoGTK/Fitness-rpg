@@ -24,7 +24,7 @@ const RESEND_API_KEY           = Deno.env.get('RESEND_API_KEY')!
 /** Change to your verified Resend sender domain before going live.
  *  For testing you can use the Resend sandbox: 'onboarding@resend.dev'
  *  (only sends to the account owner's email). */
-const FROM_EMAIL = 'FitRPG <noreply@fitrpg.app>'
+const FROM_EMAIL = 'FitRPG <onboarding@resend.dev>'
 const APP_URL    = 'https://fitness-rpg-eight.vercel.app'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
