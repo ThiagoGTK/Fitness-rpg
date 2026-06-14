@@ -19,7 +19,7 @@ update public.profiles
   set role = 'admin'
   where id = (
     select id from auth.users
-    where email = 'thiago.gaitkoski@philozon.com.br'
+    where email = 'thiago.gaitkoski@gmail.com'
     limit 1
   );
 
