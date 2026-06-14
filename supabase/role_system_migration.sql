@@ -30,13 +30,26 @@ create index if not exists idx_profiles_trainer_code on public.profiles(trainer_
 -- 5. Enable RLS on profiles (safe to run even if already enabled)
 alter table public.profiles enable row level security;
 
--- 6. RLS Policies (drop first to avoid conflicts)
-drop policy if exists "Users read own profile"       on public.profiles;
+-- 6. Helper function to check admin role without causing RLS recursion.
+--    security definer makes it run as postgres (bypasses RLS) so the
+--    "Admin reads all profiles" policy doesn't loop into itself.
+create or replace function public.is_admin()
+  returns boolean
+  language sql
+  security definer
+  stable
+  set search_path = public
+as $$
+  select exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
+$$;
+
+-- 7. RLS Policies (drop first to avoid conflicts)
+drop policy if exists "Users read own profile"         on public.profiles;
 drop policy if exists "Trainer reads student profiles" on public.profiles;
-drop policy if exists "Admin reads all profiles"     on public.profiles;
-drop policy if exists "Users update own profile"     on public.profiles;
-drop policy if exists "Admin updates any profile"    on public.profiles;
-drop policy if exists "Users insert own profile"     on public.profiles;
+drop policy if exists "Admin reads all profiles"       on public.profiles;
+drop policy if exists "Users update own profile"       on public.profiles;
+drop policy if exists "Admin updates any profile"      on public.profiles;
+drop policy if exists "Users insert own profile"       on public.profiles;
 
 create policy "Users read own profile"
   on public.profiles for select
@@ -48,9 +61,7 @@ create policy "Trainer reads student profiles"
 
 create policy "Admin reads all profiles"
   on public.profiles for select
-  using (
-    exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin')
-  );
+  using (public.is_admin());
 
 create policy "Users update own profile"
   on public.profiles for update
@@ -59,9 +70,8 @@ create policy "Users update own profile"
 
 create policy "Admin updates any profile"
   on public.profiles for update
-  using (
-    exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin')
-  );
+  using (public.is_admin())
+  with check (public.is_admin());
 
 create policy "Users insert own profile"
   on public.profiles for insert
