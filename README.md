@@ -19,6 +19,17 @@
 - 👤 **Multi-usuário** — Cada conta tem dados completamente isolados via RLS no PostgreSQL
 - 📱 **Mobile-first** — Layout responsivo otimizado para celular com barra de navegação inferior
 
+### 🧑‍💼 Módulo Personal Trainer _(novo)_
+
+- **3 papéis**: `admin`, `trainer` (personal) e `student` (aluno)
+- Personal cria o login do aluno — o aluno já nasce vinculado automaticamente
+- Personal pode vincular alunos que já tinham conta no app pelo e-mail
+- Personal monta **planos de treino prescritos** com séries, reps, carga e descanso por exercício
+- Aluno visualiza os planos do personal e executa os treinos normalmente
+- Personal acompanha o histórico e progresso de cada aluno
+- Aluno troca de senha obrigatoriamente no primeiro acesso
+- Admin cria personal trainers com **código PT único** (PT-001, PT-002…)
+
 ---
 
 ## 🛠️ Stack Tecnológica
@@ -33,6 +44,21 @@
 | Backend / Banco | Supabase (PostgreSQL + Auth) |
 | Autenticação | Supabase Auth (JWT + bcrypt) |
 | Deploy | Vercel |
+
+---
+
+## 🔑 Sistema de Papéis
+
+| Papel | Acesso |
+|-------|--------|
+| `student` | App completo (treinos, histórico, conquistas, perfil) |
+| `trainer` | Tudo do aluno + painel `/trainer` (alunos, planos prescritos) |
+| `admin` | Tudo do trainer + painel `/admin` (criar/listar personal trainers) |
+
+- O **admin** cria contas de personal trainer via painel Admin
+- O **personal** cria contas de aluno via painel Personal — o aluno já nasce vinculado
+- Alunos com conta existente podem ser vinculados pelo personal via busca por e-mail
+- Na primeira entrada, alunos e personais criados pelo sistema devem trocar a senha
 
 ---
 
@@ -53,22 +79,30 @@ src/
 ├── lib/
 │   └── supabase.ts          # Cliente Supabase
 ├── pages/
-│   ├── LoginPage.tsx
+│   ├── LoginPage.tsx          # Abas Aluno / Personal
 │   ├── RegisterPage.tsx
+│   ├── ChangePasswordPage.tsx # Troca obrigatória no 1º acesso
 │   ├── Dashboard.tsx
 │   ├── MusclesPage.tsx
 │   ├── ExercisesPage.tsx
 │   ├── WorkoutLogPage.tsx
 │   ├── HistoryPage.tsx
 │   ├── AchievementsPage.tsx
-│   └── RecordsPage.tsx
+│   ├── RecordsPage.tsx
+│   ├── TrainerDashboard.tsx   # Painel do personal
+│   ├── TrainerStudentsPage.tsx
+│   ├── TrainerStudentPage.tsx
+│   ├── TrainerPlanForm.tsx
+│   └── AdminPage.tsx
 ├── services/
 │   ├── achievementChecker.ts
 │   ├── levelCalculator.ts
 │   └── xpCalculator.ts
 ├── store/
 │   ├── authStore.ts         # Estado de autenticação (Zustand)
-│   └── gameStore.ts         # Estado do jogo / dados do usuário (Zustand)
+│   ├── gameStore.ts         # Estado do jogo / dados do usuário (Zustand)
+│   ├── trainerStore.ts      # Estado do módulo personal trainer
+│   └── weeklyStore.ts       # Estado do plano semanal
 ├── types/
 │   └── index.ts
 └── App.tsx                  # Rotas e CSS global
@@ -104,10 +138,24 @@ VITE_SUPABASE_ANON_KEY=sua_chave_publica_aqui
 
 ### 3. Configure o banco de dados
 
-No Supabase, vá em **SQL Editor** e execute o script completo em [`docs/schema.sql`](docs/schema.sql) (ou veja a seção abaixo).
+No Supabase, vá em **SQL Editor** e execute os scripts na ordem abaixo.
+
+**Script base** (tabelas principais + RLS inicial) — veja a seção expandível abaixo.
+
+**Script do módulo personal** — [`supabase/trainer_module_migration.sql`](supabase/trainer_module_migration.sql):
+adiciona tabelas `trainer_plans` e `trainer_plan_exercises`, colunas `trainer_id` e `email` em profiles.
+
+**Script do sistema de papéis** — [`supabase/role_system_migration.sql`](supabase/role_system_migration.sql):
+adiciona `role` (admin/trainer/student), `trainer_code`, `must_change_password` e reescreve as políticas RLS com função `is_admin()` para evitar recursão.
+
+> Após rodar os scripts, defina o papel de admin diretamente no SQL:
+> ```sql
+> update public.profiles set role = 'admin'
+>   where id = (select id from auth.users where email = 'seu@email.com');
+> ```
 
 <details>
-<summary>📋 Ver script SQL completo</summary>
+<summary>📋 Ver script SQL base</summary>
 
 ```sql
 -- Perfis de usuário
@@ -244,11 +292,19 @@ create trigger on_auth_user_created
 
 </details>
 
-### 4. Desative a confirmação de e-mail
+### 4. Deploy da Edge Function
+
+```bash
+supabase functions deploy create-user
+```
+
+Necessária para o admin criar personal trainers e para o personal criar alunos com senha temporária e vínculo automático.
+
+### 5. Desative a confirmação de e-mail
 
 No Supabase: **Authentication → Providers → Email** → desmarque **"Confirm email"** → Salvar.
 
-### 5. Rode o projeto
+### 6. Rode o projeto
 
 ```bash
 npm run dev
