@@ -5,19 +5,18 @@ import { useTrainerStore } from '../store/trainerStore';
 import type { Exercise } from '../types';
 import type { TrainerPlan, WorkoutSession } from '../types';
 
+const DAY_LABELS: Record<number, string> = { 0: 'Dom', 1: 'Seg', 2: 'Ter', 3: 'Qua', 4: 'Qui', 5: 'Sex', 6: 'Sáb' };
+
 function formatDate(date?: string) {
   if (!date) return '—';
   return new Date(date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
-function getPlanStatus(plan: TrainerPlan, workouts: WorkoutSession[]) {
-  if (!plan.scheduledDate) return 'Agendado';
-  const today = new Date().toISOString().slice(0, 10);
-  const session = workouts.find(w => w.date.slice(0, 10) === plan.scheduledDate);
-  if (session) return 'Treino concluído';
-  if (plan.scheduledDate === today) return 'Não treinou hoje';
-  if (plan.scheduledDate < today) return 'Treino incompleto';
-  return 'Agendado';
+function formatSchedule(scheduledDate?: string): string {
+  if (!scheduledDate) return 'Sem dia definido';
+  const days = scheduledDate.split(',').map(Number).filter(n => n >= 0 && n <= 6);
+  if (days.length === 0) return 'Sem dia definido';
+  return days.sort((a, b) => (a === 0 ? 7 : a) - (b === 0 ? 7 : b)).map(d => DAY_LABELS[d]).join(', ');
 }
 
 function comparePlanWithSession(plan: TrainerPlan, session?: WorkoutSession) {
@@ -74,10 +73,7 @@ export function TrainerStudentPage() {
   const latestWorkout = workouts[0];
 
   const selectedPlan = useMemo(() => plans.find(plan => plan.id === selectedPlanId) ?? plans[0], [plans, selectedPlanId]);
-  const selectedSession = useMemo(() => {
-    if (!selectedPlan || !selectedPlan.scheduledDate) return latestWorkout;
-    return workouts.find(workout => workout.date.slice(0, 10) === selectedPlan.scheduledDate) ?? latestWorkout;
-  }, [selectedPlan, workouts, latestWorkout]);
+  const selectedSession = useMemo(() => latestWorkout, [latestWorkout]);
 
   if (loading) {
     return (
@@ -143,39 +139,26 @@ export function TrainerStudentPage() {
             </div>
           ) : (
             <div style={{ display: 'grid', gap: 12 }}>
-              {plans.map(plan => {
-                const session = workouts.find(w => plan.scheduledDate && w.date.slice(0, 10) === plan.scheduledDate);
-                const status = getPlanStatus(plan, workouts);
-                return (
-                  <div key={plan.id} className="game-card" style={{ padding: 16 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                      <div>
-                        <div style={{ fontSize: 15, fontWeight: 700, color: '#f1f5f9' }}>{plan.planName || 'Plano sem nome'}</div>
-                        <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
-                          Agendado para {plan.scheduledDate ? formatDate(plan.scheduledDate) : 'sem data'} · {status}
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        <button className="btn-secondary" style={{ minWidth: 120 }} onClick={() => setSelectedPlanId(plan.id)}>
-                          Ver comparação
-                        </button>
-                        <Link className="btn-ghost" style={{ minWidth: 120, justifyContent: 'center' }} to={`/trainer/students/${studentId}/plans/${plan.id}/edit`}>
-                          Editar
-                        </Link>
+              {plans.map(plan => (
+                <div key={plan.id} className="game-card" style={{ padding: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                    <div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: '#f1f5f9' }}>{plan.planName || 'Plano sem nome'}</div>
+                      <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
+                        {formatSchedule(plan.scheduledDate)} · {plan.exercises.length} exercício{plan.exercises.length !== 1 ? 's' : ''}
                       </div>
                     </div>
-                    <div style={{ marginTop: 12, display: 'grid', gap: 6 }}>
-                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 12, color: '#94a3b8' }}>Exercícios:</span>
-                        <span style={{ fontSize: 12, color: '#e2e8f0' }}>{plan.exercises.length}</span>
-                        {session && (
-                          <span style={{ fontSize: 12, color: '#10b981' }}>Registrado em {formatDate(session.date)}</span>
-                        )}
-                      </div>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      <button className="btn-secondary" style={{ minWidth: 120 }} onClick={() => setSelectedPlanId(plan.id)}>
+                        Ver comparação
+                      </button>
+                      <Link className="btn-ghost" style={{ minWidth: 120, justifyContent: 'center' }} to={`/trainer/students/${studentId}/plans/${plan.id}/edit`}>
+                        Editar
+                      </Link>
                     </div>
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -215,7 +198,7 @@ export function TrainerStudentPage() {
             <div>
               <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#f1f5f9' }}>Comparação do plano</h2>
               <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
-                Plano selecionado: {selectedPlan.planName || 'Sem nome'} · {selectedPlan.scheduledDate ? formatDate(selectedPlan.scheduledDate) : 'sem data'}
+                Plano selecionado: {selectedPlan.planName || 'Sem nome'} · {formatSchedule(selectedPlan.scheduledDate)}
               </div>
             </div>
             <button className="btn-secondary" style={{ minWidth: 140 }} onClick={() => setSelectedPlanId(null)}>

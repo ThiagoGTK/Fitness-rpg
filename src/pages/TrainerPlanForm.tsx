@@ -6,6 +6,16 @@ import { useTrainerStore } from '../store/trainerStore';
 import { SEED_MUSCLES } from '../data/seedData';
 import type { TrainerPlanExercise } from '../types';
 
+const WEEK_DAYS = [
+  { label: 'Seg', value: 1 },
+  { label: 'Ter', value: 2 },
+  { label: 'Qua', value: 3 },
+  { label: 'Qui', value: 4 },
+  { label: 'Sex', value: 5 },
+  { label: 'Sáb', value: 6 },
+  { label: 'Dom', value: 0 },
+];
+
 const EXERCISE_TYPES = [
   { value: 'strength',  label: 'Força' },
   { value: 'cardio',    label: 'Cardio' },
@@ -46,7 +56,7 @@ export function TrainerPlanForm() {
   const { studentDetails, loadStudentDetail, createPlan, updatePlan, loading } = useTrainerStore();
 
   const [planName, setPlanName] = useState('');
-  const [scheduledDate, setScheduledDate] = useState('');
+  const [selectedDays, setSelectedDays] = useState<number[]>([]);
   const [notes, setNotes] = useState('');
   const [planExercises, setPlanExercises] = useState<TrainerPlanExercise[]>([]);
   const [saving, setSaving] = useState(false);
@@ -68,13 +78,17 @@ export function TrainerPlanForm() {
   useEffect(() => {
     if (!selectedPlan) {
       setPlanName('');
-      setScheduledDate('');
+      setSelectedDays([]);
       setNotes('');
       setPlanExercises([{ ...defaultExercise, id: 'row-0', orderIndex: 0 }]);
       return;
     }
     setPlanName(selectedPlan.planName);
-    setScheduledDate(selectedPlan.scheduledDate ?? '');
+    setSelectedDays(
+      selectedPlan.scheduledDate
+        ? selectedPlan.scheduledDate.split(',').map(Number).filter(n => n >= 0 && n <= 6)
+        : []
+    );
     setNotes(selectedPlan.notes);
     setPlanExercises(selectedPlan.exercises.map((exercise, index) => ({ ...exercise, orderIndex: index })));
   }, [selectedPlan]);
@@ -143,10 +157,12 @@ export function TrainerPlanForm() {
       primaryMuscleId: ex.primaryMuscleId || '',
     }));
 
+    const daysStr = selectedDays.length > 0 ? selectedDays.slice().sort((a, b) => a - b).join(',') : undefined;
+
     if (planId) {
-      await updatePlan(planId, planName.trim(), scheduledDate || undefined, notes, payload);
+      await updatePlan(planId, planName.trim(), daysStr, notes, payload);
     } else {
-      await createPlan(studentId, planName.trim(), scheduledDate || undefined, notes, payload);
+      await createPlan(studentId, planName.trim(), daysStr, notes, payload);
     }
 
     setSaving(false);
@@ -177,15 +193,43 @@ export function TrainerPlanForm() {
             <input className="game-input" value={planName} onChange={e => setPlanName(e.target.value)} placeholder="Treino de força" />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div>
-              <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 6 }}>Data agendada</label>
-              <input className="game-input" type="date" value={scheduledDate} onChange={e => setScheduledDate(e.target.value)} />
+          <div>
+            <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 8 }}>Dias da semana</label>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {WEEK_DAYS.map(day => {
+                const active = selectedDays.includes(day.value);
+                return (
+                  <button
+                    key={day.value}
+                    type="button"
+                    onClick={() => setSelectedDays(prev =>
+                      active ? prev.filter(d => d !== day.value) : [...prev, day.value]
+                    )}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: 8,
+                      fontSize: 13,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      border: `1px solid ${active ? '#7c3aed' : '#1e2d4a'}`,
+                      background: active ? '#7c3aed30' : 'transparent',
+                      color: active ? '#a855f7' : '#64748b',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    {day.label}
+                  </button>
+                );
+              })}
             </div>
-            <div>
-              <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 6 }}>Observações</label>
-              <input className="game-input" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Instruções gerais" />
-            </div>
+            {selectedDays.length === 0 && (
+              <div style={{ fontSize: 11, color: '#475569', marginTop: 6 }}>Nenhum dia selecionado</div>
+            )}
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 6 }}>Observações</label>
+            <input className="game-input" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Instruções gerais" />
           </div>
 
           <div>
