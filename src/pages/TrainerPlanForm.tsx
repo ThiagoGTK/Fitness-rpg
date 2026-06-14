@@ -1,9 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Plus, Trash2, ArrowLeft, Check } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, Check, Loader2, X } from 'lucide-react';
 import { useGameStore } from '../store/gameStore';
 import { useTrainerStore } from '../store/trainerStore';
+import { SEED_MUSCLES } from '../data/seedData';
 import type { TrainerPlanExercise } from '../types';
+
+const EXERCISE_TYPES = [
+  { value: 'strength',  label: 'Força' },
+  { value: 'cardio',    label: 'Cardio' },
+  { value: 'endurance', label: 'Resistência' },
+  { value: 'mobility',  label: 'Mobilidade' },
+  { value: 'stretching', label: 'Alongamento' },
+];
 
 const defaultExercise: TrainerPlanExercise = {
   id: '',
@@ -21,10 +30,19 @@ const defaultExercise: TrainerPlanExercise = {
   orderIndex: 0,
 };
 
+interface NewExForm {
+  name: string;
+  muscleId: string;
+  type: string;
+  creating: boolean;
+}
+
+const blankNewEx = (): NewExForm => ({ name: '', muscleId: SEED_MUSCLES[0].id, type: 'strength', creating: false });
+
 export function TrainerPlanForm() {
   const { studentId, planId } = useParams();
   const navigate = useNavigate();
-  const { exercises } = useGameStore();
+  const { exercises, addExercise } = useGameStore();
   const { studentDetails, loadStudentDetail, createPlan, updatePlan, loading } = useTrainerStore();
 
   const [planName, setPlanName] = useState('');
@@ -33,6 +51,10 @@ export function TrainerPlanForm() {
   const [planExercises, setPlanExercises] = useState<TrainerPlanExercise[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  // Inline exercise creation state — only one row open at a time
+  const [createIdx, setCreateIdx] = useState<number | null>(null);
+  const [newEx, setNewEx] = useState<NewExForm>(blankNewEx());
 
   useEffect(() => {
     if (!studentId) return;
@@ -51,7 +73,6 @@ export function TrainerPlanForm() {
       setPlanExercises([{ ...defaultExercise, id: 'row-0', orderIndex: 0 }]);
       return;
     }
-
     setPlanName(selectedPlan.planName);
     setScheduledDate(selectedPlan.scheduledDate ?? '');
     setNotes(selectedPlan.notes);
@@ -62,12 +83,48 @@ export function TrainerPlanForm() {
     setPlanExercises(prev => prev.map((item, idx) => idx === index ? { ...item, ...update } : item));
   }
 
-  function addExercise() {
+  function addRow() {
     setPlanExercises(prev => [...prev, { ...defaultExercise, id: `row-${prev.length}`, orderIndex: prev.length }]);
   }
 
   function removeExercise(index: number) {
+    if (createIdx === index) { setCreateIdx(null); setNewEx(blankNewEx()); }
     setPlanExercises(prev => prev.filter((_, idx) => idx !== index).map((item, idx) => ({ ...item, orderIndex: idx })));
+  }
+
+  function openCreate(index: number) {
+    setCreateIdx(index);
+    setNewEx(blankNewEx());
+  }
+
+  function closeCreate() {
+    setCreateIdx(null);
+    setNewEx(blankNewEx());
+  }
+
+  async function handleCreateExercise(index: number) {
+    if (!newEx.name.trim()) return;
+    setNewEx(prev => ({ ...prev, creating: true }));
+
+    const id = await addExercise({
+      name: newEx.name.trim(),
+      primaryMuscleId: newEx.muscleId,
+      secondaryMuscles: [],
+      type: newEx.type as 'strength' | 'cardio' | 'endurance' | 'mobility' | 'stretching',
+      notes: '',
+    });
+
+    if (id) {
+      handleExerciseChange(index, {
+        exerciseId: id,
+        exerciseName: newEx.name.trim(),
+        primaryMuscleId: newEx.muscleId,
+        exerciseType: newEx.type as TrainerPlanExercise['exerciseType'],
+      });
+      closeCreate();
+    } else {
+      setNewEx(prev => ({ ...prev, creating: false }));
+    }
   }
 
   async function handleSubmit() {
@@ -137,14 +194,14 @@ export function TrainerPlanForm() {
                 <div style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9' }}>Exercícios prescritos</div>
                 <div style={{ fontSize: 12, color: '#64748b' }}>Defina séries, repetições, peso e descanso.</div>
               </div>
-              <button className="btn-secondary" onClick={addExercise}>
+              <button className="btn-secondary" onClick={addRow}>
                 <Plus size={14} /> Adicionar exercício
               </button>
             </div>
 
             <div style={{ display: 'grid', gap: 14 }}>
               {planExercises.map((exercise, index) => (
-                <div key={exercise.id || index} className="game-card" style={{ padding: 14 }}>
+                <div key={exercise.id || index} className="game-card" style={{ padding: 14, border: '1px solid #1e2d4a' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: '#f1f5f9' }}>Exercício {index + 1}</div>
                     <button className="btn-ghost" onClick={() => removeExercise(index)}>
@@ -153,8 +210,20 @@ export function TrainerPlanForm() {
                   </div>
 
                   <div style={{ display: 'grid', gap: 12 }}>
+                    {/* Exercise selector */}
                     <div>
-                      <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 6 }}>Exercício</label>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                        <label style={{ fontSize: 12, color: '#94a3b8' }}>Exercício</label>
+                        {createIdx !== index && (
+                          <button
+                            type="button"
+                            onClick={() => openCreate(index)}
+                            style={{ fontSize: 11, color: '#a855f7', background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', display: 'flex', alignItems: 'center', gap: 3 }}
+                          >
+                            <Plus size={11} /> Criar novo
+                          </button>
+                        )}
+                      </div>
                       <select className="game-input" value={exercise.exerciseId ?? ''} onChange={e => {
                         const selectedId = e.target.value;
                         const selected = selectedId ? getExerciseOption(selectedId) : undefined;
@@ -164,17 +233,95 @@ export function TrainerPlanForm() {
                           primaryMuscleId: selected?.primaryMuscleId ?? exercise.primaryMuscleId,
                         });
                       }}>
-                        <option value="">Selecione ou digite abaixo</option>
+                        <option value="">Selecione um exercício</option>
                         {exercises.map(ex => (
                           <option key={ex.id} value={ex.id}>{ex.name}</option>
                         ))}
                       </select>
                     </div>
 
-                    <div>
-                      <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 6 }}>Nome alternativo</label>
-                      <input className="game-input" value={exercise.exerciseName} onChange={e => handleExerciseChange(index, { exerciseName: e.target.value })} placeholder="Nome livre" />
-                    </div>
+                    {/* Inline create exercise form */}
+                    {createIdx === index && (
+                      <div style={{
+                        padding: '14px 16px',
+                        borderRadius: 10,
+                        background: '#7c3aed12',
+                        border: '1px solid #7c3aed40',
+                        display: 'grid',
+                        gap: 10,
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: '#a855f7' }}>Criar novo exercício</div>
+                          <button type="button" onClick={closeCreate} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
+                            <X size={14} />
+                          </button>
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>Nome do exercício *</label>
+                          <input
+                            className="game-input"
+                            value={newEx.name}
+                            onChange={e => setNewEx(prev => ({ ...prev, name: e.target.value }))}
+                            placeholder="Ex.: Supino reto"
+                            autoFocus
+                            onKeyDown={e => { if (e.key === 'Enter') handleCreateExercise(index); }}
+                          />
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                          <div>
+                            <label style={{ display: 'block', fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>Músculo principal</label>
+                            <select
+                              className="game-input"
+                              value={newEx.muscleId}
+                              onChange={e => setNewEx(prev => ({ ...prev, muscleId: e.target.value }))}
+                            >
+                              {SEED_MUSCLES.map(m => (
+                                <option key={m.id} value={m.id}>{m.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>Tipo</label>
+                            <select
+                              className="game-input"
+                              value={newEx.type}
+                              onChange={e => setNewEx(prev => ({ ...prev, type: e.target.value }))}
+                            >
+                              {EXERCISE_TYPES.map(t => (
+                                <option key={t.value} value={t.value}>{t.label}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          className="btn-primary"
+                          onClick={() => handleCreateExercise(index)}
+                          disabled={!newEx.name.trim() || newEx.creating}
+                          style={{ justifyContent: 'center' }}
+                        >
+                          {newEx.creating
+                            ? <><Loader2 size={13} style={{ animation: 'spin 0.8s linear infinite' }} /> Criando...</>
+                            : <><Check size={13} /> Criar e selecionar</>}
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Free-form name (shown when no exercise selected from list) */}
+                    {!exercise.exerciseId && createIdx !== index && (
+                      <div>
+                        <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 6 }}>Nome livre</label>
+                        <input
+                          className="game-input"
+                          value={exercise.exerciseName}
+                          onChange={e => handleExerciseChange(index, { exerciseName: e.target.value })}
+                          placeholder="Ex.: Agachamento livre"
+                        />
+                      </div>
+                    )}
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
                       <div>
@@ -221,6 +368,8 @@ export function TrainerPlanForm() {
           </div>
         </div>
       </div>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
