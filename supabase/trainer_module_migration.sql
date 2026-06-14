@@ -12,7 +12,7 @@ create table if not exists public.trainer_plans (
   trainer_id      uuid        not null references auth.users(id) on delete cascade,
   student_id      uuid        not null references auth.users(id) on delete cascade,
   plan_name       text        not null default '',
-  scheduled_date  date,
+  scheduled_date  text,
   notes           text        not null default '',
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now()
