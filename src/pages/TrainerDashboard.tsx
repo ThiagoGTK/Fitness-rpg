@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, ClipboardList, Sparkles, Clock, PlusCircle } from 'lucide-react';
 import { useTrainerStore } from '../store/trainerStore';
-import { useGameStore } from '../store/gameStore';
 
 function formatDate(date?: string) {
   if (!date) return 'Nunca';
@@ -11,8 +10,7 @@ function formatDate(date?: string) {
 
 export function TrainerDashboard() {
   const navigate = useNavigate();
-  const { students, plans, loading, initTrainer } = useTrainerStore();
-  const { user } = useGameStore();
+  const { students, plans, initTrainer } = useTrainerStore();
 
   useEffect(() => {
     initTrainer();
@@ -72,7 +70,7 @@ export function TrainerDashboard() {
             <div style={{ width: 38, height: 38, borderRadius: 12, background: '#f9731620', display: 'grid', placeItems: 'center', color: '#f97316' }}><Clock size={18} /></div>
             <div>
               <div style={{ fontSize: 12, color: '#64748b' }}>Último treino</div>
-              <div style={{ fontSize: 24, fontWeight: 800, color: '#f1f5f9' }}>{students.length > 0 ? formatDate(students.reduce((latest, cur) => {
+              <div style={{ fontSize: 24, fontWeight: 800, color: '#f1f5f9' }}>{students.length > 0 ? formatDate(students.reduce<string | undefined>((latest, cur) => {
                 if (!cur.lastTrainedDate) return latest;
                 return latest && latest > cur.lastTrainedDate ? latest : cur.lastTrainedDate;
               }, undefined)) : '—'}</div>

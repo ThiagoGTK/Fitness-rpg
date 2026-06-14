@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { ArrowLeft, ClipboardList, BarChart3, CalendarCheck, CheckCircle2, XCircle, ArrowRight, PlusCircle } from 'lucide-react';
+import { ArrowLeft, PlusCircle } from 'lucide-react';
 import { useTrainerStore } from '../store/trainerStore';
 import type { Exercise } from '../types';
 import type { TrainerPlan, WorkoutSession } from '../types';

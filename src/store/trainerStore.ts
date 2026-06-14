@@ -216,10 +216,12 @@ export const useTrainerStore = create<TrainerStore>()((set, get) => ({
       longestStreak: (profileRow.longest_streak as number) ?? 0,
       lastTrainedDate: (profileRow.last_trained_date as string | null) ?? undefined,
       birthDate: (profileRow.birth_date as string | null) ?? undefined,
-      sex: (profileRow.sex as string | null) ?? undefined,
+      sex: (profileRow.sex as 'male' | 'female' | null) ?? undefined,
       email: (profileRow.email as string) ?? undefined,
       isTrainer: (profileRow.is_trainer as boolean) ?? false,
       trainerId: (profileRow.trainer_id as string | null) ?? undefined,
+      role: ((profileRow.role as string) ?? 'student') as 'admin' | 'trainer' | 'student',
+      mustChangePassword: (profileRow.must_change_password as boolean) ?? false,
     };
 
     const plans: TrainerPlan[] = (plansRes.data ?? []).map(mapPlanRow);

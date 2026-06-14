@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useGameStore } from '../store/gameStore';
 import { Eye, EyeOff, LogIn, Dumbbell, UserCheck } from 'lucide-react';
@@ -8,7 +8,6 @@ type LoginTab = 'student' | 'trainer';
 
 export function LoginPage() {
   const { signIn } = useAuthStore();
-  const { user: gameUser } = useGameStore();
   const navigate = useNavigate();
 
   const [tab, setTab]           = useState<LoginTab>('student');

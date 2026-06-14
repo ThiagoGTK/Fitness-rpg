@@ -219,6 +219,8 @@ export const SEED_USER: UserProfile = {
   longestStreak: 5,
   lastTrainedDate: daysAgo(5),
   joinedAt: daysAgo(30),
+  role: 'student',
+  mustChangePassword: false,
 };
 
 export function buildSeedState() {
