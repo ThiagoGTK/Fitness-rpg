@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Dumbbell, List, PlusCircle, History,
-  Trophy, Target, CalendarDays, Zap, Trash2, X, LogOut, User,
+  Trophy, Target, CalendarDays, Zap, Trash2, X, LogOut, User, UserPlus, Shield,
 } from 'lucide-react';
 import { useGameStore } from '../store/gameStore';
 import { useAuthStore } from '../store/authStore';
@@ -23,6 +23,12 @@ export function Navigation() {
   const { user, cleanReset, clearData } = useGameStore();
   const { signOut } = useAuthStore();
   const location    = useLocation();
+  const trainerItem = { to: '/trainer', icon: UserPlus, label: 'Personal' };
+  const adminItem   = { to: '/admin',   icon: Shield,   label: 'Admin' };
+  const navItems =
+    user.role === 'admin'   ? [...NAV, trainerItem, adminItem] :
+    user.role === 'trainer' ? [...NAV, trainerItem] :
+    NAV;
 
   const [showConfirm,  setShowConfirm]  = useState(false);
   const [showLogout,   setShowLogout]   = useState(false);
@@ -146,7 +152,7 @@ export function Navigation() {
 
         {/* Nav links */}
         <div style={{ padding: '8px 10px', flex: 1 }}>
-          {NAV.map(({ to, icon: Icon, label }) => {
+          {navItems.map(({ to, icon: Icon, label }) => {
             const active = to === '/' ? location.pathname === '/' : location.pathname.startsWith(to);
             return (
               <NavLink
@@ -324,9 +330,10 @@ export function Navigation() {
           position: 'fixed', bottom: 0, left: 0, right: 0,
           background: '#0d1526', borderTop: '1px solid #1e2d4a',
           display: 'flex', zIndex: 50, padding: '4px 0',
+          overflowX: 'auto',
         }}
       >
-        {NAV.map(({ to, icon: Icon, label }) => {
+        {navItems.map(({ to, icon: Icon, label }) => {
           const active = to === '/' ? location.pathname === '/' : location.pathname.startsWith(to);
           return (
             <NavLink

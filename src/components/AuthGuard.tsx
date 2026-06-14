@@ -81,10 +81,13 @@ export function AuthGuard() {
   // 3. Game data loading
   if (!gameInitialized || gameLoading) return <LoadingScreen />;
 
-  // 4. Profile incomplete → onboarding (birth date + sex)
-  if (!gameUser.birthDate || !gameUser.sex) return <ProfileSetupPage />;
+  // 4. Force password change for accounts created by admin/trainer
+  if (gameUser.mustChangePassword) return <Navigate to="/change-password" replace />;
 
-  // 5. All good — render app shell
+  // 5. Profile incomplete → onboarding (birth date + sex) — skip for admin/trainer
+  if (gameUser.role === 'student' && (!gameUser.birthDate || !gameUser.sex)) return <ProfileSetupPage />;
+
+  // 6. All good — render app shell
   return (
     <div className="app-layout" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Navigation />

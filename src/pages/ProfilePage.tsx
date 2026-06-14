@@ -110,16 +110,18 @@ export function ProfilePage() {
   const [birthDate, setBirthDate] = useState(
     user.birthDate ?? MAX_BIRTHDATE
   );
+  const [isTrainer, setIsTrainer] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError]     = useState('');
 
   // Sync local state when store updates (e.g. initial load)
   useEffect(() => {
+    setIsTrainer(user.isTrainer ?? false);
     setName(user.name ?? '');
     setSex(user.sex ?? '');
     if (user.birthDate) setBirthDate(user.birthDate);
-  }, [user.name, user.sex, user.birthDate]);
+  }, [user.name, user.sex, user.birthDate, user.isTrainer]);
 
   async function handleSaveProfile() {
     if (!name.trim()) { setSaveError('O nome não pode ser vazio.'); return; }
@@ -131,6 +133,7 @@ export function ProfilePage() {
         name: name.trim(),
         sex: sex || undefined,
         birthDate: birthDate || undefined,
+        isTrainer,
       });
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);

@@ -89,6 +89,7 @@ export interface LevelUpEvent {
 }
 
 export type Sex = 'male' | 'female' | 'other';
+export type UserRole = 'admin' | 'trainer' | 'student';
 
 export interface UserProfile {
   name: string;
@@ -101,6 +102,48 @@ export interface UserProfile {
   joinedAt: string;
   birthDate?: string; // YYYY-MM-DD
   sex?: Sex;
+  email?: string;
+  role: UserRole;
+  trainerCode?: string;
+  mustChangePassword: boolean;
+  isTrainer?: boolean; // kept for backwards compat — use role === 'trainer' instead
+  trainerId?: string;
+}
+
+export interface TrainerPlanExercise {
+  id: string;
+  planId: string;
+  exerciseId: string | null;
+  exerciseName: string;
+  primaryMuscleId: string;
+  secondaryMuscles: SecondaryMuscle[];
+  exerciseType: string;
+  sets: number;
+  reps: number;
+  weight: number;
+  restSeconds?: number;
+  notes: string;
+  orderIndex: number;
+}
+
+export interface TrainerPlan {
+  id: string;
+  trainerId: string;
+  studentId: string;
+  planName: string;
+  scheduledDate?: string;
+  notes: string;
+  exercises: TrainerPlanExercise[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TrainerStudentSummary {
+  id: string;
+  name: string;
+  email?: string;
+  lastTrainedDate?: string;
+  totalWorkouts: number;
 }
 
 export const EXERCISE_TYPE_LABELS: Record<ExerciseType, string> = {

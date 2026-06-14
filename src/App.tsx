@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { useEffect, type ReactNode } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthGuard } from './components/AuthGuard';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
@@ -12,7 +12,26 @@ import { AchievementsPage } from './pages/AchievementsPage';
 import { RecordsPage } from './pages/RecordsPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { WeeklyPlanPage } from './pages/WeeklyPlanPage';
+import { TrainerDashboard } from './pages/TrainerDashboard';
+import { TrainerStudentsPage } from './pages/TrainerStudentsPage';
+import { TrainerStudentPage } from './pages/TrainerStudentPage';
+import { TrainerPlanForm } from './pages/TrainerPlanForm';
+import { AdminPage } from './pages/AdminPage';
+import { ChangePasswordPage } from './pages/ChangePasswordPage';
 import { useAuthStore } from './store/authStore';
+import { useGameStore } from './store/gameStore';
+
+function TrainerGuard({ children }: { children: React.ReactNode }) {
+  const { user } = useGameStore();
+  if (user.role !== 'trainer' && user.role !== 'admin') return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
+function AdminGuard({ children }: { children: React.ReactNode }) {
+  const { user } = useGameStore();
+  if (user.role !== 'admin') return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
 
 export default function App() {
   const { initialize } = useAuthStore();
@@ -169,8 +188,9 @@ export default function App() {
 
       <Routes>
         {/* Public routes — no navigation */}
-        <Route path="/login"    element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/login"           element={<LoginPage />} />
+        <Route path="/register"        element={<RegisterPage />} />
+        <Route path="/change-password" element={<ChangePasswordPage />} />
 
         {/* Protected routes — wrapped in AuthGuard (handles auth check + app shell) */}
         <Route element={<AuthGuard />}>
@@ -183,6 +203,12 @@ export default function App() {
           <Route path="/records"      element={<RecordsPage />} />
           <Route path="/profile"      element={<ProfilePage />} />
           <Route path="/weekly"       element={<WeeklyPlanPage />} />
+          <Route path="/trainer"      element={<TrainerGuard><TrainerDashboard /></TrainerGuard>} />
+          <Route path="/trainer/students" element={<TrainerGuard><TrainerStudentsPage /></TrainerGuard>} />
+          <Route path="/trainer/students/:studentId" element={<TrainerGuard><TrainerStudentPage /></TrainerGuard>} />
+          <Route path="/trainer/students/:studentId/plans/new" element={<TrainerGuard><TrainerPlanForm /></TrainerGuard>} />
+          <Route path="/trainer/students/:studentId/plans/:planId/edit" element={<TrainerGuard><TrainerPlanForm /></TrainerGuard>} />
+          <Route path="/admin" element={<AdminGuard><AdminPage /></AdminGuard>} />
         </Route>
       </Routes>
     </BrowserRouter>

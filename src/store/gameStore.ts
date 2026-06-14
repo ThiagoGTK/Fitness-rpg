@@ -38,6 +38,9 @@ const DEFAULT_USER: UserProfile = {
   name: '',
   joinedAt: new Date().toISOString(),
   level: 1, totalXP: 0, weeklyXP: 0, streak: 0, longestStreak: 0,
+  role: 'student',
+  mustChangePassword: false,
+  isTrainer: false,
 };
 
 interface GameStore {
@@ -53,7 +56,7 @@ interface GameStore {
 
   initData: (userId: string) => Promise<void>;
   clearData: () => void;
-  updateProfile: (data: { birthDate?: string; sex?: Sex; name?: string }) => Promise<void>;
+  updateProfile: (data: { birthDate?: string; sex?: Sex; name?: string; isTrainer?: boolean; mustChangePassword?: boolean }) => Promise<void>;
   addWorkout: (input: WorkoutSessionInput) => Promise<void>;
   addExercise: (data: Omit<Exercise, 'id' | 'level' | 'currentXP' | 'totalXPEarned' | 'timesPerformed' | 'createdAt'>) => Promise<string | null>;
   updateExercise: (id: string, data: Partial<Pick<Exercise, 'name' | 'primaryMuscleId' | 'secondaryMuscles' | 'type' | 'notes'>>) => Promise<void>;
@@ -194,6 +197,11 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       lastTrainedDate: (p.last_trained_date as string | null) ?? undefined,
       birthDate: (p.birth_date as string | null) ?? undefined,
       sex: (p.sex as Sex | null) ?? undefined,
+      role: ((p.role as string) ?? 'student') as UserProfile['role'],
+      trainerCode: (p.trainer_code as string | null) ?? undefined,
+      mustChangePassword: (p.must_change_password as boolean) ?? false,
+      isTrainer: (p.is_trainer as boolean) ?? false,
+      trainerId: (p.trainer_id as string | null) ?? undefined,
     } : { ...DEFAULT_USER };
 
     set({ muscles, exercises, workouts, achievements, personalRecords, user, loading: false, initialized: true });
@@ -233,12 +241,15 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       streak:         u.streak         ?? 0,
       longest_streak: u.longestStreak  ?? 0,
       joined_at:      u.joinedAt       ?? new Date().toISOString(),
+      is_trainer:     u.isTrainer     ?? false,
     };
 
     // Override with the fields that are actually being changed
-    if (data.birthDate !== undefined) upsertPayload.birth_date = data.birthDate;
-    if (data.sex       !== undefined) upsertPayload.sex        = data.sex;
-    if (data.name      !== undefined) upsertPayload.name       = data.name;
+    if (data.birthDate          !== undefined) upsertPayload.birth_date          = data.birthDate;
+    if (data.sex                !== undefined) upsertPayload.sex                = data.sex;
+    if (data.name               !== undefined) upsertPayload.name               = data.name;
+    if (data.isTrainer          !== undefined) upsertPayload.is_trainer          = data.isTrainer;
+    if (data.mustChangePassword !== undefined) upsertPayload.must_change_password = data.mustChangePassword;
     upsertPayload.updated_at = new Date().toISOString();
 
     const { error } = await supabase
