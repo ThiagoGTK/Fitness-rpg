@@ -66,3 +66,10 @@ create policy "Admin updates any profile"
 create policy "Users insert own profile"
   on public.profiles for insert
   with check (auth.uid() = id);
+
+-- Allow trainer to link an existing student who has no trainer yet
+drop policy if exists "Trainer can link unlinked student" on public.profiles;
+create policy "Trainer can link unlinked student"
+  on public.profiles for update
+  using (role = 'student' and trainer_id is null)
+  with check (trainer_id = auth.uid());

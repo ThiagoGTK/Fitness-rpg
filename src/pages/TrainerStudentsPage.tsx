@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserPlus, CheckCircle2, XCircle, ArrowLeft, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { UserPlus, CheckCircle2, XCircle, ArrowLeft, Eye, EyeOff, Loader2, Link2 } from 'lucide-react';
 import { useTrainerStore } from '../store/trainerStore';
 import { supabase } from '../lib/supabase';
 import type { TrainerStudentSummary } from '../types';
@@ -9,6 +9,7 @@ export function TrainerStudentsPage() {
   const navigate = useNavigate();
   const { students, loading, initTrainer, loadStudents } = useTrainerStore();
 
+  // Create new student
   const [name, setName]         = useState('');
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
@@ -16,7 +17,58 @@ export function TrainerStudentsPage() {
   const [creating, setCreating] = useState(false);
   const [feedback, setFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
 
+  // Link existing student
+  const [linkEmail, setLinkEmail]     = useState('');
+  const [linking, setLinking]         = useState(false);
+  const [linkFeedback, setLinkFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
+
   useEffect(() => { initTrainer(); }, []);
+
+  async function handleLink(e: React.FormEvent) {
+    e.preventDefault();
+    if (!linkEmail.trim()) { setLinkFeedback({ ok: false, msg: 'Informe o e-mail do aluno.' }); return; }
+    setLinking(true);
+    setLinkFeedback(null);
+
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) { setLinking(false); return; }
+
+    const { data: profile, error: findErr } = await supabase
+      .from('profiles')
+      .select('id, name, trainer_id, role')
+      .ilike('email', linkEmail.trim())
+      .single();
+
+    if (findErr || !profile) {
+      setLinkFeedback({ ok: false, msg: 'Aluno não encontrado. Verifique o e-mail.' });
+      setLinking(false);
+      return;
+    }
+    if (profile.role !== 'student') {
+      setLinkFeedback({ ok: false, msg: 'Este usuário não é um aluno.' });
+      setLinking(false);
+      return;
+    }
+    if (profile.trainer_id) {
+      setLinkFeedback({ ok: false, msg: 'Este aluno já está vinculado a outro personal.' });
+      setLinking(false);
+      return;
+    }
+
+    const { error: updateErr } = await supabase
+      .from('profiles')
+      .update({ trainer_id: authUser.id })
+      .eq('id', profile.id);
+
+    if (updateErr) {
+      setLinkFeedback({ ok: false, msg: 'Erro ao vincular. Tente novamente.' });
+    } else {
+      setLinkFeedback({ ok: true, msg: `${profile.name} vinculado com sucesso!` });
+      setLinkEmail('');
+      await loadStudents();
+    }
+    setLinking(false);
+  }
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -118,6 +170,50 @@ export function TrainerStudentsPage() {
             {creating
               ? <><Loader2 size={15} style={{ animation: 'spin 0.8s linear infinite' }} /> Criando acesso...</>
               : <><UserPlus size={15} /> Criar aluno</>}
+          </button>
+        </form>
+      </div>
+
+      {/* Link existing student */}
+      <div className="game-card" style={{ padding: 24, marginBottom: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: '#0ea5e920', display: 'grid', placeItems: 'center', color: '#0ea5e9' }}>
+            <Link2 size={18} />
+          </div>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#f1f5f9' }}>Vincular aluno existente</div>
+            <div style={{ fontSize: 12, color: '#94a3b8' }}>O aluno já tem conta no FitRPG e ainda não tem personal.</div>
+          </div>
+        </div>
+
+        <form onSubmit={handleLink} style={{ display: 'grid', gap: 14 }}>
+          <div>
+            <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 5 }}>E-mail do aluno</label>
+            <input
+              className="game-input"
+              type="email"
+              value={linkEmail}
+              onChange={e => setLinkEmail(e.target.value)}
+              placeholder="aluno@email.com"
+            />
+          </div>
+
+          {linkFeedback && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 8,
+              background: linkFeedback.ok ? '#22c55e15' : '#ef444415',
+              border: `1px solid ${linkFeedback.ok ? '#22c55e40' : '#ef444440'}`,
+              fontSize: 13, color: linkFeedback.ok ? '#86efac' : '#fca5a5',
+            }}>
+              {linkFeedback.ok ? <CheckCircle2 size={15} /> : <XCircle size={15} />}
+              {linkFeedback.msg}
+            </div>
+          )}
+
+          <button className="btn-secondary" type="submit" disabled={linking} style={{ justifyContent: 'center' }}>
+            {linking
+              ? <><Loader2 size={15} style={{ animation: 'spin 0.8s linear infinite' }} /> Vinculando...</>
+              : <><Link2 size={15} /> Vincular aluno</>}
           </button>
         </form>
       </div>
