@@ -379,6 +379,9 @@ export function TrainerPlanForm() {
                       <div>
                         <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 6 }}>Peso (kg)</label>
                         <input className="game-input" type="number" min={0} step={0.5} value={exercise.weight} onChange={e => handleExerciseChange(index, { weight: Number(e.target.value) })} />
+                        {exercise.weight === 0 && (
+                          <div style={{ fontSize: 11, color: '#f97316', marginTop: 4 }}>O aluno definirá o peso</div>
+                        )}
                       </div>
                     </div>
 

@@ -170,9 +170,13 @@ export function Dashboard() {
                         <span style={{ fontSize: 12, color: '#a855f7', fontWeight: 700, background: '#7c3aed15', padding: '3px 8px', borderRadius: 6 }}>
                           {ex.sets}×{ex.reps}
                         </span>
-                        {ex.weight > 0 && (
+                        {ex.weight > 0 ? (
                           <span style={{ fontSize: 12, color: '#0ea5e9', fontWeight: 700, background: '#0ea5e915', padding: '3px 8px', borderRadius: 6 }}>
                             {ex.weight}kg
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: 12, color: '#f97316', fontWeight: 700, background: '#f9731615', padding: '3px 8px', borderRadius: 6 }}>
+                            Peso livre
                           </span>
                         )}
                         {ex.rest_seconds && (
