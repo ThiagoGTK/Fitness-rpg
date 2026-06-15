@@ -3,12 +3,31 @@ import { LevelBadge } from '../components/ui/LevelBadge';
 import { XPBar } from '../components/ui/XPBar';
 import { xpForMuscleLevel, xpForUserLevel } from '../services/levelCalculator';
 import { calcVolume } from '../services/xpCalculator';
-import { Zap, Flame, Trophy, Calendar, TrendingUp, Star, Dumbbell, Clock, Trash2 } from 'lucide-react';
+import { Zap, Flame, Trophy, Calendar, TrendingUp, Star, Dumbbell, Clock, Trash2, ClipboardList } from 'lucide-react';
 import { format, parseISO, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
 import { BodyMap } from '../components/BodyMap';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
+
+interface TodayPlanExercise {
+  id: string;
+  exercise_name: string;
+  sets: number;
+  reps: number;
+  weight: number;
+  rest_seconds: number | null;
+  notes: string;
+  order_index: number;
+}
+
+interface TodayPlan {
+  id: string;
+  plan_name: string;
+  notes: string;
+  trainer_plan_exercises: TodayPlanExercise[];
+}
 
 function StatCard({ icon, label, value, color = '#a855f7', sub }: {
   icon: React.ReactNode; label: string; value: string | number; color?: string; sub?: string;
@@ -36,6 +55,29 @@ export function Dashboard() {
   const navigate = useNavigate();
   const [showReset, setShowReset]   = useState(false);
   const [resetting, setResetting]   = useState(false);
+  const [todayPlans, setTodayPlans] = useState<TodayPlan[]>([]);
+
+  useEffect(() => {
+    if (user.role !== 'student') return;
+    supabase.auth.getUser().then(({ data: { user: authUser } }) => {
+      if (!authUser) return;
+      const todayIdx = new Date().getDay();
+      supabase
+        .from('trainer_plans')
+        .select('id, plan_name, notes, trainer_plan_exercises(*)')
+        .eq('student_id', authUser.id)
+        .order('created_at', { ascending: true })
+        .then(({ data }) => {
+          if (!data) return;
+          const filtered = (data as TodayPlan[]).filter(p => {
+            const raw = (p as unknown as { scheduled_date?: string }).scheduled_date;
+            if (!raw) return false;
+            return raw.split(',').map(Number).includes(todayIdx);
+          });
+          setTodayPlans(filtered);
+        });
+    });
+  }, [user.role]);
 
   const sortedMuscles = [...muscles].sort((a, b) => b.totalXPEarned - a.totalXPEarned);
   const topMuscles = sortedMuscles.slice(0, 4);
@@ -78,6 +120,74 @@ export function Dashboard() {
           <Dumbbell size={16} /> Registrar Treino
         </button>
       </div>
+
+      {/* Today's plan — students only */}
+      {todayPlans.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          {todayPlans.map(plan => (
+            <div key={plan.id} className="game-card" style={{
+              padding: '18px 20px',
+              background: 'linear-gradient(135deg, #111827 0%, #0f1f35 100%)',
+              border: '1px solid #0ea5e940',
+              marginBottom: 10,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 34, height: 34, borderRadius: 10, background: '#0ea5e920', display: 'grid', placeItems: 'center', color: '#0ea5e9', flexShrink: 0 }}>
+                    <ClipboardList size={17} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 11, color: '#0ea5e9', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>Treino de hoje</div>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: '#f1f5f9' }}>{plan.plan_name}</div>
+                  </div>
+                </div>
+                <button className="btn-primary" onClick={() => navigate('/log')} style={{ fontSize: 13 }}>
+                  <Dumbbell size={14} /> Registrar treino
+                </button>
+              </div>
+
+              {plan.notes && (
+                <div style={{ fontSize: 12, color: '#64748b', marginBottom: 12, paddingLeft: 2 }}>{plan.notes}</div>
+              )}
+
+              <div style={{ display: 'grid', gap: 8 }}>
+                {[...plan.trainer_plan_exercises]
+                  .sort((a, b) => a.order_index - b.order_index)
+                  .map((ex, i) => (
+                    <div key={ex.id} style={{
+                      display: 'flex', alignItems: 'center', gap: 12,
+                      padding: '10px 12px', borderRadius: 8, background: '#0d1526',
+                      border: '1px solid #1e2d4a',
+                    }}>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: '#475569', width: 18, textAlign: 'center', flexShrink: 0 }}>{i + 1}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: '#e2e8f0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {ex.exercise_name || 'Exercício'}
+                        </div>
+                        {ex.notes && <div style={{ fontSize: 11, color: '#475569', marginTop: 2 }}>{ex.notes}</div>}
+                      </div>
+                      <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                        <span style={{ fontSize: 12, color: '#a855f7', fontWeight: 700, background: '#7c3aed15', padding: '3px 8px', borderRadius: 6 }}>
+                          {ex.sets}×{ex.reps}
+                        </span>
+                        {ex.weight > 0 && (
+                          <span style={{ fontSize: 12, color: '#0ea5e9', fontWeight: 700, background: '#0ea5e915', padding: '3px 8px', borderRadius: 6 }}>
+                            {ex.weight}kg
+                          </span>
+                        )}
+                        {ex.rest_seconds && (
+                          <span style={{ fontSize: 11, color: '#64748b', padding: '3px 8px', borderRadius: 6, background: '#1e2d4a' }}>
+                            {ex.rest_seconds}s
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* User level card */}
       <div className="game-card" style={{
