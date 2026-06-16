@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useGameStore } from '../store/gameStore';
 import type { WorkoutSet, WorkoutEntryInput, Exercise, MuscleGroup, WorkoutSession, ExerciseType } from '../types';
 import { EXERCISE_TYPE_LABELS } from '../types';
@@ -308,9 +308,23 @@ function EntryCard({ entry, index, exercises, muscles, onUpdate, onRemove, prevS
   );
 }
 
+interface PlanExerciseState {
+  exercise_name: string;
+  primary_muscle_id: string;
+  secondary_muscles: { muscleId: string; xpPercentage: number }[];
+  exercise_type: ExerciseType;
+  sets: number;
+  reps: number;
+  weight: number;
+  rest_seconds: number | null;
+  notes: string;
+  order_index: number;
+}
+
 export function WorkoutLogPage() {
-  const { exercises, muscles, workouts, addWorkout } = useGameStore();
+  const { exercises, muscles, workouts, addWorkout, addExercise } = useGameStore();
   const navigate = useNavigate();
+  const location = useLocation();
   const today = new Date().toISOString().slice(0, 10);
 
   const [date, setDate] = useState(today);
@@ -319,6 +333,47 @@ export function WorkoutLogPage() {
   const [success, setSuccess]   = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors]   = useState<string[]>([]);
+  const [loadingPlan, setLoadingPlan] = useState(false);
+
+  useEffect(() => {
+    const fromPlan = (location.state as { fromPlan?: PlanExerciseState[] } | null)?.fromPlan;
+    if (!fromPlan || fromPlan.length === 0) return;
+
+    setLoadingPlan(true);
+    (async () => {
+      const sorted = [...fromPlan].sort((a, b) => a.order_index - b.order_index);
+      const newEntries: EntryDraft[] = [];
+
+      for (const planEx of sorted) {
+        const name = (planEx.exercise_name || '').trim();
+        let matched = exercises.find(ex => ex.name.toLowerCase() === name.toLowerCase());
+
+        if (!matched && name) {
+          const newId = await addExercise({
+            name,
+            primaryMuscleId: planEx.primary_muscle_id || muscles[0]?.id || '',
+            secondaryMuscles: planEx.secondary_muscles ?? [],
+            type: planEx.exercise_type || 'strength',
+            notes: '',
+          });
+          if (newId) matched = { id: newId } as Exercise;
+        }
+
+        newEntries.push({
+          exerciseId: matched?.id ?? '',
+          sets: Array.from({ length: Math.max(1, planEx.sets) }, () => ({ reps: planEx.reps, weight: planEx.weight })),
+          restTime: planEx.rest_seconds ?? undefined,
+          notes: planEx.notes || '',
+          difficulty: 7,
+          expanded: false,
+        });
+      }
+
+      setEntries(newEntries);
+      setLoadingPlan(false);
+      navigate('.', { replace: true, state: null });
+    })();
+  }, []);
 
   function addEntry() {
     setEntries(es => [...es, {
@@ -385,6 +440,15 @@ export function WorkoutLogPage() {
       setErrors(['Erro ao salvar treino. Verifique sua conexão e tente novamente.']);
       setSubmitting(false);
     }
+  }
+
+  if (loadingPlan) {
+    return (
+      <div style={{ padding: '60px 20px', textAlign: 'center', maxWidth: 500, margin: '0 auto' }}>
+        <div style={{ display: 'inline-block', width: 28, height: 28, border: '3px solid #7c3aed40', borderTopColor: '#7c3aed', borderRadius: '50%', animation: 'spin 0.8s linear infinite', marginBottom: 14 }} />
+        <div style={{ color: '#94a3b8', fontSize: 14 }}>Carregando exercícios do plano...</div>
+      </div>
+    );
   }
 
   if (success) {

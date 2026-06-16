@@ -14,6 +14,9 @@ import { supabase } from '../lib/supabase';
 interface TodayPlanExercise {
   id: string;
   exercise_name: string;
+  primary_muscle_id: string;
+  secondary_muscles: { muscleId: string; xpPercentage: number }[];
+  exercise_type: string;
   sets: number;
   reps: number;
   weight: number;
@@ -64,7 +67,7 @@ export function Dashboard() {
       const todayIdx = new Date().getDay();
       supabase
         .from('trainer_plans')
-        .select('id, plan_name, notes, scheduled_date, trainer_plan_exercises(*)')
+        .select('id, plan_name, notes, scheduled_date, trainer_plan_exercises(id, exercise_name, primary_muscle_id, secondary_muscles, exercise_type, sets, reps, weight, rest_seconds, notes, order_index)')
         .eq('student_id', authUser.id)
         .order('created_at', { ascending: true })
         .then(({ data }) => {
@@ -141,7 +144,11 @@ export function Dashboard() {
                     <div style={{ fontSize: 16, fontWeight: 800, color: '#f1f5f9' }}>{plan.plan_name}</div>
                   </div>
                 </div>
-                <button className="btn-primary" onClick={() => navigate('/log')} style={{ fontSize: 13 }}>
+                <button
+                  className="btn-primary"
+                  onClick={() => navigate('/log', { state: { fromPlan: plan.trainer_plan_exercises } })}
+                  style={{ fontSize: 13 }}
+                >
                   <Dumbbell size={14} /> Registrar treino
                 </button>
               </div>
