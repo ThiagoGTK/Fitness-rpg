@@ -83,3 +83,10 @@ create policy "Trainer can link unlinked student"
   on public.profiles for update
   using (role = 'student' and trainer_id is null)
   with check (trainer_id = auth.uid());
+
+-- Allow trainer to remove (unlink) one of their own students
+drop policy if exists "Trainer can unlink own student" on public.profiles;
+create policy "Trainer can unlink own student"
+  on public.profiles for update
+  using (trainer_id = auth.uid())
+  with check (trainer_id is null);

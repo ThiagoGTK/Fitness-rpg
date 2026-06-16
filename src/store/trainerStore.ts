@@ -18,6 +18,7 @@ interface TrainerStore {
   loadPlans: (studentId?: string) => Promise<void>;
   loadStudentDetail: (studentId: string) => Promise<void>;
   addStudentByEmail: (email: string) => Promise<string | null>;
+  unlinkStudent: (studentId: string) => Promise<void>;
   createPlan: (studentId: string, planName: string, scheduledDate: string | undefined, notes: string, exercises: TrainerPlanExercise[]) => Promise<string | null>;
   updatePlan: (planId: string, planName: string, scheduledDate: string | undefined, notes: string, exercises: TrainerPlanExercise[]) => Promise<void>;
   deletePlan: (planId: string) => Promise<void>;
@@ -303,6 +304,20 @@ export const useTrainerStore = create<TrainerStore>()((set, get) => ({
     await get().loadStudents();
     set({ loading: false });
     return null;
+  },
+
+  unlinkStudent: async (studentId) => {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) return;
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ trainer_id: null })
+      .eq('id', studentId)
+      .eq('trainer_id', authUser.id);
+
+    if (error) console.error('[trainerStore] unlinkStudent error:', error);
+    await get().loadStudents();
   },
 
   createPlan: async (studentId, planName, scheduledDate, notes, exercises) => {
