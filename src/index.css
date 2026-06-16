@@ -58,7 +58,10 @@ body {
   from { opacity: 0; transform: translateY(16px); }
   to { opacity: 1; transform: translateY(0); }
 }
-.fade-in-up { animation: fadeInUp 0.4s ease-out forwards; }
+/* No `forwards`: a lingering `transform` (even translateY(0)) would make this
+   element a containing block for any `position: fixed` modal nested inside it,
+   breaking viewport-centered modals across every page that uses this class. */
+.fade-in-up { animation: fadeInUp 0.4s ease-out; }
 
 @keyframes backdropIn {
   from { opacity: 0; }
