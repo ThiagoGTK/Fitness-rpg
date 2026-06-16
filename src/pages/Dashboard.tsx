@@ -29,8 +29,11 @@ interface TodayPlan {
   id: string;
   plan_name: string;
   notes: string;
+  scheduled_date?: string;
   trainer_plan_exercises: TodayPlanExercise[];
 }
+
+const DAY_LABELS: Record<number, string> = { 0: 'Domingo', 1: 'Segunda', 2: 'Terça', 3: 'Quarta', 4: 'Quinta', 5: 'Sexta', 6: 'Sábado' };
 
 function StatCard({ icon, label, value, color = '#a855f7', sub }: {
   icon: React.ReactNode; label: string; value: string | number; color?: string; sub?: string;
@@ -58,13 +61,12 @@ export function Dashboard() {
   const navigate = useNavigate();
   const [showReset, setShowReset]   = useState(false);
   const [resetting, setResetting]   = useState(false);
-  const [todayPlans, setTodayPlans] = useState<TodayPlan[]>([]);
+  const [studentPlans, setStudentPlans] = useState<TodayPlan[]>([]);
 
   useEffect(() => {
     if (user.role !== 'student') return;
     supabase.auth.getUser().then(({ data: { user: authUser } }) => {
       if (!authUser) return;
-      const todayIdx = new Date().getDay();
       supabase
         .from('trainer_plans')
         .select('id, plan_name, notes, scheduled_date, trainer_plan_exercises(id, exercise_name, primary_muscle_id, secondary_muscles, exercise_type, sets, reps, weight, rest_seconds, notes, order_index)')
@@ -72,15 +74,31 @@ export function Dashboard() {
         .order('created_at', { ascending: true })
         .then(({ data }) => {
           if (!data) return;
-          const filtered = (data as TodayPlan[]).filter(p => {
-            const raw = (p as unknown as { scheduled_date?: string }).scheduled_date;
-            if (!raw) return false;
-            return raw.split(',').map(Number).includes(todayIdx);
-          });
-          setTodayPlans(filtered);
+          setStudentPlans(data as TodayPlan[]);
         });
     });
   }, [user.role]);
+
+  const todayIdx = new Date().getDay();
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const completedPlanIdsToday = new Set(
+    workouts.filter(w => w.date.slice(0, 10) === todayStr && w.trainerPlanId).map(w => w.trainerPlanId)
+  );
+  const todaysPlans = studentPlans.filter(p => (p.scheduled_date ?? '').split(',').map(Number).includes(todayIdx));
+  const pendingTodayPlans = todaysPlans.filter(p => !completedPlanIdsToday.has(p.id));
+  const allTodayDone = todaysPlans.length > 0 && pendingTodayPlans.length === 0;
+
+  const nextPlan = (() => {
+    let best: { plan: TodayPlan; dayIdx: number; diff: number } | null = null;
+    for (const p of studentPlans) {
+      const days = (p.scheduled_date ?? '').split(',').map(Number).filter(n => n >= 0 && n <= 6);
+      for (const d of days) {
+        const diff = ((d - todayIdx + 7) % 7) || 7;
+        if (!best || diff < best.diff) best = { plan: p, dayIdx: d, diff };
+      }
+    }
+    return best;
+  })();
 
   const sortedMuscles = [...muscles].sort((a, b) => b.totalXPEarned - a.totalXPEarned);
   const topMuscles = sortedMuscles.slice(0, 4);
@@ -125,9 +143,30 @@ export function Dashboard() {
       </div>
 
       {/* Today's plan — students only */}
-      {todayPlans.length > 0 && (
+      {allTodayDone && (
+        <div className="game-card" style={{
+          padding: '18px 20px', marginBottom: 16,
+          background: 'linear-gradient(135deg, #111827 0%, #0f2419 100%)',
+          border: '1px solid #10b98140',
+          display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap',
+        }}>
+          <div style={{ width: 38, height: 38, borderRadius: 12, background: '#10b98120', display: 'grid', placeItems: 'center', color: '#10b981', flexShrink: 0 }}>
+            <Trophy size={19} />
+          </div>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9' }}>Treino de hoje concluído! 🎉</div>
+            {nextPlan && (
+              <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+                Próximo treino: <strong style={{ color: '#10b981' }}>{nextPlan.plan.plan_name}</strong> · {DAY_LABELS[nextPlan.dayIdx]}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {pendingTodayPlans.length > 0 && (
         <div style={{ marginBottom: 16 }}>
-          {todayPlans.map(plan => (
+          {pendingTodayPlans.map(plan => (
             <div key={plan.id} className="game-card" style={{
               padding: '18px 20px',
               background: 'linear-gradient(135deg, #111827 0%, #0f1f35 100%)',
