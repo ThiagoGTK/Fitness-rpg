@@ -15,20 +15,24 @@
 - 🏆 **17 conquistas** — Desbloqueie medalhas por marcos de treino, sequências e recordes
 - 🎯 **Recordes pessoais (PRs)** — Rastreamento automático de carga máxima, volume, repetições e séries
 - 📊 **Histórico completo** — Todos os treinos com XP ganho, volume total e evolução por data
-- 🔥 **Sistema de sequência (streak)** — Acompanhe dias consecutivos de treino
+- 🔥 **Sistema de sequência (streak)** — Dias consecutivos de treino, com 3 dias de tolerância antes de perder a sequência (quebra no 4º dia sem treinar, mesmo sem abrir o app)
 - 👤 **Multi-usuário** — Cada conta tem dados completamente isolados via RLS no PostgreSQL
-- 📱 **Mobile-first** — Layout responsivo otimizado para celular com barra de navegação inferior
+- 📱 **Mobile-first** — Layout responsivo com barra de navegação inferior enxuta (itens secundários ficam em "Mais opções" no Perfil)
+- 📈 **Evolução** — Gráficos de volume/XP por semana e tabela de progresso de força por exercício (carga, reps e séries: primeiro registro vs. mais recente)
 
-### 🧑‍💼 Módulo Personal Trainer _(novo)_
+### 🧑‍💼 Módulo Personal Trainer
 
 - **3 papéis**: `admin`, `trainer` (personal) e `student` (aluno)
 - Personal cria o login do aluno — o aluno já nasce vinculado automaticamente
-- Personal pode vincular alunos que já tinham conta no app pelo e-mail
-- Personal monta **planos de treino prescritos** com séries, reps, carga e descanso por exercício
-- Aluno visualiza os planos do personal e executa os treinos normalmente
-- Personal acompanha o histórico e progresso de cada aluno
+- Personal pode vincular ou **remover** alunos (com confirmação por e-mail) a qualquer momento
+- Personal monta **planos de treino prescritos**, com **dias da semana** (Seg–Dom, múltipla escolha), séries, reps, carga e descanso por exercício
+- Personal pode **criar um exercício novo direto no formulário do plano**, sem sair da tela
+- Aluno vê um card **"Treino de hoje"** no dashboard quando há um plano agendado para o dia — registrar o treino já vem com os exercícios pré-preenchidos
+- Personal compara o prescrito vs. realizado em **cards por exercício** (séries/reps/peso/volume, com badges de variação) e um resumo de % de adesão ao plano
+- Personal pode excluir planos quando quiser
 - Aluno troca de senha obrigatoriamente no primeiro acesso
 - Admin cria personal trainers com **código PT único** (PT-001, PT-002…)
+- Pessoas sem personal podem criar conta própria e usar o app normalmente (vínculo é opcional)
 
 ---
 
@@ -89,6 +93,8 @@ src/
 │   ├── HistoryPage.tsx
 │   ├── AchievementsPage.tsx
 │   ├── RecordsPage.tsx
+│   ├── WeeklyPlanPage.tsx
+│   ├── EvolutionPage.tsx      # Gráficos de progresso (acesso restrito por enquanto)
 │   ├── TrainerDashboard.tsx   # Painel do personal
 │   ├── TrainerStudentsPage.tsx
 │   ├── TrainerStudentPage.tsx
