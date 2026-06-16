@@ -141,6 +141,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       date: s.date as string,
       totalXP: s.total_xp as number,
       notes: (s.notes as string) ?? '',
+      trainerPlanId: (s.trainer_plan_id as string | null) ?? undefined,
       entries: ((s.workout_entries ?? []) as EntryRow[]).map(e => ({
         exerciseId: e.exercise_id,
         sets: e.sets,
@@ -354,7 +355,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
     // 1. Insert session
     const { data: sessionRow, error: sessionErr } = await supabase
       .from('workout_sessions')
-      .insert({ user_id: userId, date, total_xp: totalXP, notes: input.notes ?? '' })
+      .insert({ user_id: userId, date, total_xp: totalXP, notes: input.notes ?? '', trainer_plan_id: input.trainerPlanId ?? null })
       .select()
       .single();
 

@@ -230,6 +230,7 @@ export const useTrainerStore = create<TrainerStore>()((set, get) => ({
       date: session.date as string,
       notes: (session.notes as string) ?? '',
       totalXP: (session.total_xp as number) ?? 0,
+      trainerPlanId: (session.trainer_plan_id as string | null) ?? undefined,
       entries: ((session.workout_entries as any[]) ?? []).map(entry => ({
         exerciseId: entry.exercise_id as string,
         sets: entry.sets as any,

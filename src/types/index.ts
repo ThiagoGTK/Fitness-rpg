@@ -43,6 +43,7 @@ export interface WorkoutSessionInput {
   date: string;
   entries: WorkoutEntryInput[];
   notes: string;
+  trainerPlanId?: string;
 }
 
 export interface WorkoutSession {
@@ -51,6 +52,7 @@ export interface WorkoutSession {
   entries: WorkoutEntry[];
   totalXP: number;
   notes: string;
+  trainerPlanId?: string;
 }
 
 export interface MuscleGroup {

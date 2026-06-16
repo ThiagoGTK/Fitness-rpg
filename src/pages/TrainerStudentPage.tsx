@@ -171,22 +171,29 @@ export function TrainerStudentPage() {
             <div style={{ color: '#94a3b8', fontSize: 14 }}>O aluno ainda não registrou treinos.</div>
           ) : (
             <div style={{ display: 'grid', gap: 12 }}>
-              {workouts.slice(0, 5).map(workout => (
+              {workouts.slice(0, 5).map(workout => {
+                const planName = plans.find(p => p.id === workout.trainerPlanId)?.planName;
+                return (
                 <div key={workout.id} className="game-card" style={{ padding: 14 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
-                    <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                       <div style={{ fontSize: 15, fontWeight: 700, color: '#f1f5f9' }}>{formatDate(workout.date)}</div>
-                      <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>{workout.entries.length} exercício{workout.entries.length !== 1 ? 's' : ''}</div>
+                      {planName && (
+                        <span style={{ fontSize: 11, fontWeight: 700, color: '#a855f7', background: '#7c3aed15', padding: '2px 8px', borderRadius: 6, border: '1px solid #7c3aed40' }}>
+                          {planName}
+                        </span>
+                      )}
                     </div>
                     <div style={{ fontSize: 13, color: '#10b981', fontWeight: 700 }}>{workout.totalXP} XP</div>
                   </div>
+                  <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>{workout.entries.length} exercício{workout.entries.length !== 1 ? 's' : ''}</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
                     {workout.entries.map(entry => (
                       <span key={entry.exerciseId} style={{ fontSize: 11, color: '#64748b', background: '#111827', padding: '4px 8px', borderRadius: 8 }}>{resolveExerciseName(entry.exerciseId)}</span>
                     ))}
                   </div>
                 </div>
-              ))}
+              );})}
             </div>
           )}
         </div>

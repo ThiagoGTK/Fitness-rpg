@@ -334,9 +334,12 @@ export function WorkoutLogPage() {
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors]   = useState<string[]>([]);
   const [loadingPlan, setLoadingPlan] = useState(false);
+  const [planId, setPlanId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
-    const fromPlan = (location.state as { fromPlan?: PlanExerciseState[] } | null)?.fromPlan;
+    const state = location.state as { fromPlan?: PlanExerciseState[]; fromPlanId?: string } | null;
+    const fromPlan = state?.fromPlan;
+    if (state?.fromPlanId) setPlanId(state.fromPlanId);
     if (!fromPlan || fromPlan.length === 0) return;
 
     setLoadingPlan(true);
@@ -433,6 +436,7 @@ export function WorkoutLogPage() {
         date: new Date(date + 'T12:00:00').toISOString(),
         entries: entries.map(({ expanded: _, ...e }) => e),
         notes,
+        trainerPlanId: planId,
       });
       setSuccess(true);
       setTimeout(() => navigate('/history'), 2000);

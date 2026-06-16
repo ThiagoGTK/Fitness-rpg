@@ -146,7 +146,7 @@ export function Dashboard() {
                 </div>
                 <button
                   className="btn-primary"
-                  onClick={() => navigate('/log', { state: { fromPlan: plan.trainer_plan_exercises } })}
+                  onClick={() => navigate('/log', { state: { fromPlan: plan.trainer_plan_exercises, fromPlanId: plan.id } })}
                   style={{ fontSize: 13 }}
                 >
                   <Dumbbell size={14} /> Registrar treino
