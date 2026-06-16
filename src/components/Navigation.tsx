@@ -32,7 +32,7 @@ export function Navigation() {
     NAV;
   // Mobile bottom bar drops less-frequent items (moved into the Profile page)
   // to keep the icons from getting cramped on small screens.
-  const mobileNavItems = navItems.filter(item => item.to !== '/achievements' && item.to !== '/records');
+  const mobileNavItems = navItems.filter(item => item.to !== '/achievements' && item.to !== '/records' && item.to !== '/muscles');
 
   const [showLogout,   setShowLogout]   = useState(false);
   const [loggingOut,   setLoggingOut]   = useState(false);

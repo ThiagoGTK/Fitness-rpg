@@ -625,9 +625,26 @@ export function ProfilePage() {
         )}
       </SectionCard>
 
-      {/* ── Conquistas e Recordes ── */}
-      <SectionCard title="Conquistas e Recordes" icon={<Trophy size={18} />}>
+      {/* ── Mais opções (movidas do menu mobile) ── */}
+      <SectionCard title="Mais opções" icon={<Trophy size={18} />}>
         <div style={{ display: 'grid', gap: 10 }}>
+          <Link to="/muscles" style={{
+            display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none',
+            background: '#0d1526', border: '1px solid #1e2d4a', borderRadius: 10, padding: '14px 16px',
+          }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: 9, background: '#a855f720', border: '1px solid #a855f740',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#a855f7', flexShrink: 0,
+            }}>
+              <Dumbbell size={18} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#e2e8f0' }}>Músculos</div>
+              <div style={{ fontSize: 12, color: '#64748b' }}>Veja o nível de cada grupo muscular</div>
+            </div>
+            <ChevronRight size={18} color="#475569" />
+          </Link>
+
           <Link to="/achievements" style={{
             display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none',
             background: '#0d1526', border: '1px solid #1e2d4a', borderRadius: 10, padding: '14px 16px',
