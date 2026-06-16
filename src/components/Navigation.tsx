@@ -159,12 +159,6 @@ export function Navigation() {
               >
                 <Icon size={16} color={active ? '#a855f7' : '#64748b'} />
                 {label}
-                {to === '/log' && (
-                  <span style={{
-                    marginLeft: 'auto', background: '#7c3aed', color: 'white',
-                    fontSize: 9, fontWeight: 800, padding: '2px 6px', borderRadius: 10,
-                  }}>NOVO</span>
-                )}
               </NavLink>
             );
           })}
