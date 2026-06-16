@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   User, Mail, Lock, Eye, EyeOff, Shield,
   Flame, Trophy, Dumbbell, Calendar, Star,
-  CheckCircle, XCircle, Save, ChevronDown, ChevronUp, TrendingUp,
+  CheckCircle, XCircle, Save, ChevronDown, ChevronUp, TrendingUp, Trash2, AlertTriangle,
 } from 'lucide-react';
 import { format, parseISO, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -138,7 +138,7 @@ function PwdInput({
 // ── Main page ───────────────────────────────────────────────────────────────
 export function ProfilePage() {
   const { user: authUser } = useAuthStore();
-  const { user, workouts, achievements, updateProfile } = useGameStore();
+  const { user, workouts, achievements, updateProfile, cleanReset } = useGameStore();
 
   // ── Personal data form ──
   const [name, setName]           = useState(user.name ?? '');
@@ -205,6 +205,20 @@ export function ProfilePage() {
     { label: 'Um número',                          ok: /\d/.test(newPwd) },
     { label: 'Um caractere especial (!@#$%...)',   ok: /[^A-Za-z0-9]/.test(newPwd) },
   ];
+
+  // ── Reset data ──
+  const [showReset, setShowReset]       = useState(false);
+  const [resetConfirmText, setResetConfirmText] = useState('');
+  const [resetting, setResetting]       = useState(false);
+  const RESET_PHRASE = 'Excluir Dados';
+
+  async function handleResetData() {
+    setResetting(true);
+    await cleanReset();
+    setResetting(false);
+    setShowReset(false);
+    setResetConfirmText('');
+  }
 
   function clearPwdFields() {
     setCurrentPwd('');
@@ -627,6 +641,101 @@ export function ProfilePage() {
         </div>
       </SectionCard>
 
+      {/* ── Zona de risco ── */}
+      <SectionCard title="Zona de risco" icon={<AlertTriangle size={18} />}>
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          gap: 12, flexWrap: 'wrap',
+        }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: '#e2e8f0' }}>Zerar dados</div>
+            <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+              Apaga treinos, recordes, XP e conquistas. Os exercícios são mantidos, com nível e XP zerados.
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowReset(true)}
+            style={{
+              background: 'none', border: '1px solid #ef444440', borderRadius: 8,
+              padding: '10px 16px', cursor: 'pointer', color: '#ef4444', fontSize: 13, fontWeight: 600,
+              display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0,
+            }}
+          >
+            <Trash2 size={14} /> Zerar dados
+          </button>
+        </div>
+      </SectionCard>
+
+      {/* ── Reset confirm modal ── */}
+      {showReset && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.85)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+        }}>
+          <div style={{
+            background: '#111827', border: '1px solid #ef444440', borderRadius: 16,
+            padding: 28, maxWidth: 400, width: '100%',
+          }}>
+            <div style={{ textAlign: 'center', marginBottom: 12 }}>
+              <div style={{ fontSize: 48 }}>⚠️</div>
+            </div>
+            <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 800, color: '#f1f5f9', textAlign: 'center' }}>
+              Zerar todos os dados?
+            </h3>
+            <p style={{ margin: '0 0 6px', fontSize: 14, color: '#94a3b8', textAlign: 'center' }}>
+              Apaga <strong style={{ color: '#f1f5f9' }}>treinos, recordes, XP e conquistas</strong>.
+            </p>
+            <p style={{ margin: '0 0 20px', fontSize: 13, color: '#64748b', textAlign: 'center' }}>
+              Os exercícios são mantidos, mas com nível e XP zerados.
+            </p>
+
+            <p style={{ margin: '0 0 8px', fontSize: 13, color: '#94a3b8' }}>
+              Para confirmar, digite <strong style={{ color: '#f1f5f9' }}>{RESET_PHRASE}</strong>:
+            </p>
+            <input
+              className="game-input"
+              value={resetConfirmText}
+              onChange={e => setResetConfirmText(e.target.value)}
+              placeholder={RESET_PHRASE}
+              style={{ width: '100%', boxSizing: 'border-box', marginBottom: 20 }}
+              autoFocus
+            />
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => { setShowReset(false); setResetConfirmText(''); }}
+                disabled={resetting}
+                style={{
+                  flex: 1, padding: '12px', borderRadius: 8,
+                  border: '1px solid #1e2d4a', background: 'transparent',
+                  color: '#94a3b8', fontWeight: 600, fontSize: 14, cursor: 'pointer',
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleResetData}
+                disabled={resetting || resetConfirmText.trim() !== RESET_PHRASE}
+                style={{
+                  flex: 1, padding: '12px', borderRadius: 8, border: 'none',
+                  background: '#ef4444', color: 'white', fontWeight: 700, fontSize: 14,
+                  cursor: resetting ? 'not-allowed' : 'pointer',
+                  opacity: resetting || resetConfirmText.trim() !== RESET_PHRASE ? 0.5 : 1,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                }}
+              >
+                {resetting
+                  ? <><span style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid #ffffff60', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> Zerando...</>
+                  : <><Trash2 size={14} /> Sim, zerar tudo</>
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
