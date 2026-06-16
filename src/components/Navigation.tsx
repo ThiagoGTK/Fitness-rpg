@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Dumbbell, List, PlusCircle, History,
-  Trophy, Target, CalendarDays, Zap, Trash2, X, LogOut, User, UserPlus, Shield,
+  Trophy, Target, CalendarDays, Zap, LogOut, User, UserPlus, Shield,
 } from 'lucide-react';
 import { useGameStore } from '../store/gameStore';
 import { useAuthStore } from '../store/authStore';
@@ -20,7 +20,7 @@ const NAV = [
 ];
 
 export function Navigation() {
-  const { user, cleanReset, clearData } = useGameStore();
+  const { user, clearData } = useGameStore();
   const { signOut } = useAuthStore();
   const location    = useLocation();
   const trainerItem = { to: '/trainer', icon: UserPlus, label: 'Personal' };
@@ -30,17 +30,8 @@ export function Navigation() {
     user.role === 'trainer' ? [...NAV, trainerItem] :
     NAV;
 
-  const [showConfirm,  setShowConfirm]  = useState(false);
   const [showLogout,   setShowLogout]   = useState(false);
-  const [resetting,    setResetting]    = useState(false);
   const [loggingOut,   setLoggingOut]   = useState(false);
-
-  async function handleReset() {
-    setResetting(true);
-    await cleanReset();
-    setResetting(false);
-    setShowConfirm(false);
-  }
 
   async function handleLogout() {
     setLoggingOut(true);
@@ -182,20 +173,6 @@ export function Navigation() {
         {/* Footer actions */}
         <div style={{ padding: '12px 16px', borderTop: '1px solid #1e2d4a', display: 'flex', flexDirection: 'column', gap: 6 }}>
           <button
-            onClick={() => setShowConfirm(true)}
-            style={{
-              width: '100%', display: 'flex', alignItems: 'center', gap: 8,
-              background: 'none', border: '1px solid #ef444430', borderRadius: 8,
-              padding: '7px 10px', cursor: 'pointer', color: '#64748b', fontSize: 12,
-              transition: 'background 0.15s, color 0.15s',
-            }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#ef444415'; (e.currentTarget as HTMLButtonElement).style.color = '#ef4444'; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'none'; (e.currentTarget as HTMLButtonElement).style.color = '#64748b'; }}
-          >
-            <Trash2 size={13} /> Zerar dados
-          </button>
-
-          <button
             onClick={() => setShowLogout(true)}
             style={{
               width: '100%', display: 'flex', alignItems: 'center', gap: 8,
@@ -212,65 +189,6 @@ export function Navigation() {
           <div style={{ marginTop: 4, fontSize: 10, color: '#1e2d4a', textAlign: 'center' }}>v1.0.0 · FitRPG</div>
         </div>
       </nav>
-
-      {/* ── Reset confirm modal ───────────────────────────────────── */}
-      {showConfirm && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.8)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
-        }}>
-          <div style={{
-            background: '#111827', border: '1px solid #ef444440', borderRadius: 16,
-            padding: 28, maxWidth: 360, width: '100%', textAlign: 'center',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
-          }}>
-            <button
-              onClick={() => setShowConfirm(false)}
-              style={{ position: 'absolute', top: 12, right: 12, background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: 4 }}
-            >
-              <X size={16} />
-            </button>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>⚠️</div>
-            <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 800, color: '#f1f5f9' }}>
-              Zerar todos os dados?
-            </h3>
-            <p style={{ margin: '0 0 6px', fontSize: 14, color: '#94a3b8' }}>
-              Isso vai apagar <strong style={{ color: '#f1f5f9' }}>todos os treinos, recordes, XP e conquistas</strong>.
-            </p>
-            <p style={{ margin: '0 0 24px', fontSize: 13, color: '#64748b' }}>
-              Os exercícios cadastrados serão mantidos, mas com nível e XP zerados.
-            </p>
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-              <button
-                onClick={handleReset}
-                disabled={resetting}
-                style={{
-                  flex: 1, padding: '10px 16px', borderRadius: 8, border: 'none',
-                  background: '#ef4444', color: 'white', fontWeight: 700, fontSize: 14,
-                  cursor: resetting ? 'not-allowed' : 'pointer', opacity: resetting ? 0.7 : 1,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                }}
-              >
-                {resetting
-                  ? <><span style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid #ffffff60', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> Zerando...</>
-                  : <><Trash2 size={14} /> Sim, zerar tudo</>
-                }
-              </button>
-              <button
-                onClick={() => setShowConfirm(false)}
-                disabled={resetting}
-                style={{
-                  flex: 1, padding: '10px 16px', borderRadius: 8,
-                  border: '1px solid #1e2d4a', background: 'transparent',
-                  color: '#94a3b8', fontWeight: 600, fontSize: 14, cursor: 'pointer',
-                }}
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ── Logout confirm modal ──────────────────────────────────── */}
       {showLogout && (
