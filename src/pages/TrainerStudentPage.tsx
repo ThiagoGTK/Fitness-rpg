@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { ArrowLeft, PlusCircle } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Trash2 } from 'lucide-react';
 import { useTrainerStore } from '../store/trainerStore';
 import type { Exercise } from '../types';
 import type { TrainerPlan, WorkoutSession } from '../types';
@@ -53,8 +53,19 @@ function comparePlanWithSession(plan: TrainerPlan, session?: WorkoutSession) {
 export function TrainerStudentPage() {
   const { studentId } = useParams();
   const navigate = useNavigate();
-  const { studentDetails, loadStudentDetail, loading } = useTrainerStore();
+  const { studentDetails, loadStudentDetail, deletePlan, loading } = useTrainerStore();
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleDeletePlan(planId: string) {
+    setDeleting(true);
+    await deletePlan(planId);
+    if (studentId) await loadStudentDetail(studentId);
+    if (selectedPlanId === planId) setSelectedPlanId(null);
+    setConfirmDeleteId(null);
+    setDeleting(false);
+  }
 
   const studentExercises = studentDetails?.exercises ?? [];
 
@@ -158,8 +169,47 @@ export function TrainerStudentPage() {
                       <Link className="btn-ghost" style={{ minWidth: 120, justifyContent: 'center' }} to={`/trainer/students/${studentId}/plans/${plan.id}/edit`}>
                         Editar
                       </Link>
+                      <button
+                        className="btn-ghost"
+                        style={{ color: '#ef4444', padding: '8px 10px' }}
+                        onClick={() => setConfirmDeleteId(plan.id)}
+                        title="Excluir plano"
+                      >
+                        <Trash2 size={14} />
+                      </button>
                     </div>
                   </div>
+
+                  {confirmDeleteId === plan.id && (
+                    <div style={{
+                      marginTop: 12, padding: '10px 14px', borderRadius: 8,
+                      background: '#ef444415', border: '1px solid #ef444440',
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap',
+                    }}>
+                      <span style={{ fontSize: 13, color: '#fca5a5' }}>Excluir "{plan.planName || 'plano'}" permanentemente?</span>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button
+                          className="btn-secondary"
+                          style={{ fontSize: 12, padding: '6px 12px' }}
+                          onClick={() => setConfirmDeleteId(null)}
+                          disabled={deleting}
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          style={{
+                            fontSize: 12, padding: '6px 12px', borderRadius: 8, border: 'none',
+                            background: '#ef4444', color: '#fff', fontWeight: 700, cursor: 'pointer',
+                            opacity: deleting ? 0.7 : 1,
+                          }}
+                          onClick={() => handleDeletePlan(plan.id)}
+                          disabled={deleting}
+                        >
+                          {deleting ? 'Excluindo...' : 'Excluir'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
