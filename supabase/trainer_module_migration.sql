@@ -76,3 +76,17 @@ create policy "Student reads own plan exercises"
 -- Allow trainer to read student profile (needed by loadStudentDetail).
 -- Note: relies on RLS on profiles allowing select by trainer; add if profiles table has RLS enabled.
 -- If profiles table has no RLS, this is not needed.
+
+-- Allow trainer to read the workout history of their own students
+-- (workout_sessions/workout_entries only had an "own data" policy before this).
+create policy "Trainer reads student workout sessions"
+  on public.workout_sessions for select
+  using (exists (select 1 from public.profiles p where p.id = workout_sessions.user_id and p.trainer_id = auth.uid()));
+
+create policy "Trainer reads student workout entries"
+  on public.workout_entries for select
+  using (exists (
+    select 1 from public.workout_sessions s
+    join public.profiles p on p.id = s.user_id
+    where s.id = workout_entries.session_id and p.trainer_id = auth.uid()
+  ));
