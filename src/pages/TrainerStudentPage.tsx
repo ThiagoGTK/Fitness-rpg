@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { ArrowLeft, PlusCircle, Trash2 } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Trash2, ArrowUp, ArrowDown, Minus, CheckCircle2, XCircle } from 'lucide-react';
 import { useTrainerStore } from '../store/trainerStore';
 import type { Exercise } from '../types';
 import type { TrainerPlan, WorkoutSession } from '../types';
@@ -19,40 +19,117 @@ function formatSchedule(scheduledDate?: string): string {
   return days.sort((a, b) => (a === 0 ? 7 : a) - (b === 0 ? 7 : b)).map(d => DAY_LABELS[d]).join(', ');
 }
 
-function comparePlanWithSession(plan: TrainerPlan, session: WorkoutSession | undefined, studentExercises: Exercise[]) {
-  if (!session) return { status: 'Sem registro', details: [] as string[] };
+interface ExerciseComparison {
+  exerciseName: string;
+  done: boolean;
+  plannedSets: number;
+  actualSets?: number;
+  plannedReps: number;
+  actualReps?: number;
+  plannedWeight: number;
+  actualWeight?: number;
+  plannedVolume: number;
+  actualVolume?: number;
+}
 
+function buildComparison(plan: TrainerPlan, session: WorkoutSession | undefined, studentExercises: Exercise[]): ExerciseComparison[] {
   function exerciseNameOf(exerciseId: string): string {
     return (studentExercises.find(ex => ex.id === exerciseId)?.name ?? '').trim().toLowerCase();
   }
 
-  const details: string[] = [];
-  plan.exercises.forEach((exercise) => {
+  return plan.exercises.map(exercise => {
     const plannedName = (exercise.exerciseName || '').trim().toLowerCase();
-    const entry = session.entries.find(e => exerciseNameOf(e.exerciseId) === plannedName);
-    if (!entry) {
-      details.push(`Não realizou ${exercise.exerciseName || 'exercício'}`);
-      return;
-    }
-    if (entry.sets.length !== exercise.sets) {
-      details.push(`${exercise.exerciseName}: alterou número de séries (${exercise.sets} → ${entry.sets.length})`);
-    }
-    const plannedReps = exercise.reps;
-    const actualReps = entry.sets.map(s => s.reps).reduce((sum, reps) => sum + reps, 0) / Math.max(entry.sets.length, 1);
-    if (Math.round(actualReps) !== plannedReps) {
-      details.push(`${exercise.exerciseName}: alterou ${plannedReps} reps previstos`);
-    }
-    const plannedWeight = exercise.weight;
-    const actualWeight = entry.sets[0]?.weight ?? 0;
-    if (actualWeight > plannedWeight) {
-      details.push(`${exercise.exerciseName}: fez com carga maior (${plannedWeight}kg → ${actualWeight}kg)`);
-    } else if (actualWeight < plannedWeight) {
-      details.push(`${exercise.exerciseName}: fez com carga menor (${plannedWeight}kg → ${actualWeight}kg)`);
-    }
-  });
+    const entry = session?.entries.find(e => exerciseNameOf(e.exerciseId) === plannedName);
+    const plannedVolume = exercise.sets * exercise.reps * exercise.weight;
 
-  if (details.length === 0) return { status: 'Fez conforme prescrito', details };
-  return { status: 'Ajustes detectados', details };
+    if (!entry) {
+      return {
+        exerciseName: exercise.exerciseName || 'Exercício',
+        done: false,
+        plannedSets: exercise.sets,
+        plannedReps: exercise.reps,
+        plannedWeight: exercise.weight,
+        plannedVolume,
+      };
+    }
+
+    const actualSets = entry.sets.length;
+    const actualReps = Math.round(entry.sets.map(s => s.reps).reduce((sum, r) => sum + r, 0) / Math.max(actualSets, 1));
+    const actualWeight = entry.sets[0]?.weight ?? 0;
+    const actualVolume = entry.sets.reduce((sum, s) => sum + s.reps * s.weight, 0);
+
+    return {
+      exerciseName: exercise.exerciseName || 'Exercício',
+      done: true,
+      plannedSets: exercise.sets, actualSets,
+      plannedReps: exercise.reps, actualReps,
+      plannedWeight: exercise.weight, actualWeight,
+      plannedVolume, actualVolume,
+    };
+  });
+}
+
+function DeltaBadge({ planned, actual, suffix = '' }: { planned: number; actual: number; suffix?: string }) {
+  const diff = actual - planned;
+  if (diff === 0) {
+    return (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 700, color: '#64748b' }}>
+        <Minus size={11} /> igual
+      </span>
+    );
+  }
+  const up = diff > 0;
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 700, color: up ? '#10b981' : '#f97316' }}>
+      {up ? <ArrowUp size={11} /> : <ArrowDown size={11} />}
+      {up ? '+' : ''}{diff}{suffix}
+    </span>
+  );
+}
+
+function MetricBlock({ label, planned, actual, suffix = '' }: { label: string; planned: number; actual: number; suffix?: string }) {
+  return (
+    <div style={{ flex: 1, minWidth: 90, textAlign: 'center' }}>
+      <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>{label}</div>
+      <div style={{ fontSize: 13, color: '#475569' }}>{planned}{suffix}</div>
+      <div style={{ fontSize: 17, fontWeight: 800, color: '#f1f5f9', margin: '2px 0' }}>{actual}{suffix}</div>
+      <DeltaBadge planned={planned} actual={actual} suffix={suffix} />
+    </div>
+  );
+}
+
+function ExerciseComparisonCard({ c }: { c: ExerciseComparison }) {
+  if (!c.done) {
+    return (
+      <div className="game-card" style={{ padding: 14, background: '#ef444410', border: '1px solid #ef444430' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <XCircle size={18} color="#ef4444" style={{ flexShrink: 0 }} />
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9' }}>{c.exerciseName}</div>
+            <div style={{ fontSize: 12, color: '#fca5a5' }}>Não realizado · previsto {c.plannedSets}×{c.plannedReps}{c.plannedWeight > 0 ? ` @ ${c.plannedWeight}kg` : ''}</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const exact = c.actualSets === c.plannedSets && c.actualReps === c.plannedReps && c.actualWeight === c.plannedWeight;
+
+  return (
+    <div className="game-card" style={{ padding: 14, background: exact ? '#10b98110' : '#111827', border: `1px solid ${exact ? '#10b98130' : '#1e2d4a'}` }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+        {exact ? <CheckCircle2 size={16} color="#10b981" /> : <ArrowUp size={16} color="#94a3b8" style={{ transform: 'rotate(45deg)' }} />}
+        <div style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9' }}>{c.exerciseName}</div>
+        {exact && <span style={{ fontSize: 11, color: '#10b981', fontWeight: 700, marginLeft: 'auto' }}>Conforme prescrito</span>}
+      </div>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <MetricBlock label="Séries" planned={c.plannedSets} actual={c.actualSets!} />
+        <MetricBlock label="Reps" planned={c.plannedReps} actual={c.actualReps!} />
+        <MetricBlock label="Peso" planned={c.plannedWeight} actual={c.actualWeight!} suffix="kg" />
+        <MetricBlock label="Volume" planned={c.plannedVolume} actual={c.actualVolume!} suffix="kg" />
+      </div>
+    </div>
+  );
 }
 
 export function TrainerStudentPage() {
@@ -271,27 +348,44 @@ export function TrainerStudentPage() {
             </button>
           </div>
 
-          <div style={{ display: 'grid', gap: 16 }}>
-            <div className="game-card" style={{ padding: 16, background: '#111827' }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9', marginBottom: 8 }}>Resultado</div>
-              <div style={{ fontSize: 13, color: '#94a3b8' }}>
-                {comparePlanWithSession(selectedPlan, selectedSession, studentExercises).status}
-              </div>
-            </div>
+          {(() => {
+            const comparisons = buildComparison(selectedPlan, selectedSession, studentExercises);
+            if (!selectedSession) {
+              return (
+                <div className="game-card" style={{ padding: 16, background: '#111827', display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <XCircle size={18} color="#64748b" />
+                  <span style={{ fontSize: 13, color: '#94a3b8' }}>Sem registro de treino para este plano ainda.</span>
+                </div>
+              );
+            }
 
-            <div className="game-card" style={{ padding: 16 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9', marginBottom: 12 }}>Diferenças encontradas</div>
-              {comparePlanWithSession(selectedPlan, selectedSession, studentExercises).details.length === 0 ? (
-                <div style={{ color: '#94a3b8' }}>Nenhuma diferença detectada.</div>
-              ) : (
-                <ul style={{ paddingLeft: 18, margin: 0, color: '#94a3b8' }}>
-                  {comparePlanWithSession(selectedPlan, selectedSession, studentExercises).details.map((detail, index) => (
-                    <li key={index} style={{ marginBottom: 6 }}>{detail}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
+            const doneCount = comparisons.filter(c => c.done).length;
+            const total = comparisons.length;
+            const adherencePct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
+            const plannedVolumeTotal = comparisons.reduce((s, c) => s + c.plannedVolume, 0);
+            const actualVolumeTotal = comparisons.reduce((s, c) => s + (c.actualVolume ?? 0), 0);
+
+            return (
+              <div style={{ display: 'grid', gap: 16 }}>
+                {/* Summary */}
+                <div className="game-card" style={{ padding: 16, background: '#111827', display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+                  <div style={{ textAlign: 'center', minWidth: 100 }}>
+                    <div style={{ fontSize: 24, fontWeight: 900, color: adherencePct === 100 ? '#10b981' : '#a855f7' }}>{adherencePct}%</div>
+                    <div style={{ fontSize: 11, color: '#64748b' }}>{doneCount}/{total} exercícios feitos</div>
+                  </div>
+                  <div style={{ textAlign: 'center', minWidth: 100 }}>
+                    <div style={{ fontSize: 24, fontWeight: 900, color: '#f1f5f9' }}>{actualVolumeTotal.toLocaleString()}<span style={{ fontSize: 13, color: '#64748b' }}>kg</span></div>
+                    <div style={{ fontSize: 11, color: '#64748b' }}>volume realizado · previsto {plannedVolumeTotal.toLocaleString()}kg</div>
+                  </div>
+                </div>
+
+                {/* Per-exercise cards */}
+                <div style={{ display: 'grid', gap: 10 }}>
+                  {comparisons.map((c, i) => <ExerciseComparisonCard key={i} c={c} />)}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
     </div>
