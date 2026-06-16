@@ -183,11 +183,11 @@ export function EvolutionPage() {
               }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9' }}>{p.exerciseName}</div>
                 <div>
-                  <div style={{ fontSize: 13, color: '#e2e8f0' }}>{p.firstWeight}kg × {p.firstReps} × {p.firstSets}s</div>
+                  <div style={{ fontSize: 13, color: '#e2e8f0' }}>{p.firstWeight}kg × {p.firstReps} reps · {p.firstSets} séries</div>
                   <div style={{ fontSize: 11, color: '#64748b' }}>{formatShortDate(p.firstDate)}</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#f1f5f9' }}>{p.lastWeight}kg × {p.lastReps} × {p.lastSets}s</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#f1f5f9' }}>{p.lastWeight}kg × {p.lastReps} reps · {p.lastSets} séries</div>
                   <div style={{ fontSize: 11, color: '#64748b' }}>{formatShortDate(p.lastDate)}</div>
                 </div>
                 <WeightDelta first={p.firstWeight} last={p.lastWeight} />
