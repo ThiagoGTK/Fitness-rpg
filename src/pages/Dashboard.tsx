@@ -64,7 +64,7 @@ export function Dashboard() {
       const todayIdx = new Date().getDay();
       supabase
         .from('trainer_plans')
-        .select('id, plan_name, notes, trainer_plan_exercises(*)')
+        .select('id, plan_name, notes, scheduled_date, trainer_plan_exercises(*)')
         .eq('student_id', authUser.id)
         .order('created_at', { ascending: true })
         .then(({ data }) => {
