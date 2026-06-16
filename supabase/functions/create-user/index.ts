@@ -139,7 +139,7 @@ Deno.serve(async (req: Request) => {
 
   const { error: profileInsertErr } = await adminClient
     .from('profiles')
-    .insert(profilePayload)
+    .upsert(profilePayload, { onConflict: 'id' })
 
   if (profileInsertErr) {
     // Roll back auth user on profile failure
