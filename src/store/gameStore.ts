@@ -84,7 +84,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       supabase.from('profiles').select('*').eq('id', userId).single(),
       supabase.from('muscle_progress').select('*').eq('user_id', userId),
       supabase.from('exercises').select('*').eq('user_id', userId).order('created_at', { ascending: true }),
-      supabase.from('workout_sessions').select('*, workout_entries(*)').eq('user_id', userId).order('date', { ascending: false }),
+      supabase.from('workout_sessions').select('*, workout_entries(*)').eq('user_id', userId).order('date', { ascending: false }).order('created_at', { ascending: false }),
       supabase.from('personal_records').select('*').eq('user_id', userId),
       supabase.from('user_achievements').select('*').eq('user_id', userId),
     ]);

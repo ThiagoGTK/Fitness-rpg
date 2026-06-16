@@ -188,7 +188,8 @@ export const useTrainerStore = create<TrainerStore>()((set, get) => ({
       .from('workout_sessions')
       .select('*, workout_entries(*)')
       .eq('user_id', studentId)
-      .order('date', { ascending: false });
+      .order('date', { ascending: false })
+      .order('created_at', { ascending: false });
 
     if (workoutsRes.error) {
       console.error('[trainerStore] loadStudentDetail workouts error:', workoutsRes.error);
