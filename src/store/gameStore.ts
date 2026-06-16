@@ -205,6 +205,18 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       trainerId: (p.trainer_id as string | null) ?? undefined,
     } : { ...DEFAULT_USER };
 
+    // Streak expires after 3 full days without training (lost on the 4th day).
+    if (user.streak > 0 && user.lastTrainedDate) {
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const lastDay = user.lastTrainedDate.slice(0, 10);
+      const daysSince = Math.round((new Date(todayStr).getTime() - new Date(lastDay).getTime()) / 86400000);
+      if (daysSince > 3) {
+        user.streak = 0;
+        supabase.from('profiles').update({ streak: 0 }).eq('id', userId)
+          .then(({ error }) => { if (error) console.error('[initData] streak expiry update failed:', error); });
+      }
+    }
+
     set({ muscles, exercises, workouts, achievements, personalRecords, user, loading: false, initialized: true });
   },
 
@@ -338,14 +350,20 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       entryResults.push({ ...entryInput, xpGained: exerciseXP, muscleXP: muscleXPMap, isPR });
     }
 
-    // Streak calculation
+    // Streak calculation — keeps counting if the gap since the last
+    // session is within the 3-day grace window; breaks (resets to 1)
+    // once 4+ days have passed without training.
     const u = state.user;
     const today = date.slice(0, 10);
-    const yesterday = new Date(new Date(date).getTime() - 86400000).toISOString().slice(0, 10);
     const lastDay = u.lastTrainedDate?.slice(0, 10);
     let newStreak = u.streak;
     if (lastDay !== today) {
-      newStreak = lastDay === yesterday ? u.streak + 1 : 1;
+      if (lastDay) {
+        const daysSince = Math.round((new Date(today).getTime() - new Date(lastDay).getTime()) / 86400000);
+        newStreak = daysSince <= 3 ? u.streak + 1 : 1;
+      } else {
+        newStreak = 1;
+      }
     }
     const newTotalXP = u.totalXP + totalXP;
     const cutoff = new Date(Date.now() - 7 * 86400000).toISOString();
