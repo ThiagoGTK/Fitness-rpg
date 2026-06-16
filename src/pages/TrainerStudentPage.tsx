@@ -73,7 +73,10 @@ export function TrainerStudentPage() {
   const latestWorkout = workouts[0];
 
   const selectedPlan = useMemo(() => plans.find(plan => plan.id === selectedPlanId) ?? plans[0], [plans, selectedPlanId]);
-  const selectedSession = useMemo(() => latestWorkout, [latestWorkout]);
+  const selectedSession = useMemo(() => {
+    if (!selectedPlan) return latestWorkout;
+    return workouts.find(w => w.trainerPlanId === selectedPlan.id) ?? undefined;
+  }, [selectedPlan, workouts, latestWorkout]);
 
   if (loading) {
     return (
