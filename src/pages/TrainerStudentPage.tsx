@@ -19,12 +19,17 @@ function formatSchedule(scheduledDate?: string): string {
   return days.sort((a, b) => (a === 0 ? 7 : a) - (b === 0 ? 7 : b)).map(d => DAY_LABELS[d]).join(', ');
 }
 
-function comparePlanWithSession(plan: TrainerPlan, session?: WorkoutSession) {
+function comparePlanWithSession(plan: TrainerPlan, session: WorkoutSession | undefined, studentExercises: Exercise[]) {
   if (!session) return { status: 'Sem registro', details: [] as string[] };
+
+  function exerciseNameOf(exerciseId: string): string {
+    return (studentExercises.find(ex => ex.id === exerciseId)?.name ?? '').trim().toLowerCase();
+  }
 
   const details: string[] = [];
   plan.exercises.forEach((exercise) => {
-    const entry = session.entries.find(e => e.exerciseId === exercise.exerciseId);
+    const plannedName = (exercise.exerciseName || '').trim().toLowerCase();
+    const entry = session.entries.find(e => exerciseNameOf(e.exerciseId) === plannedName);
     if (!entry) {
       details.push(`Não realizou ${exercise.exerciseName || 'exercício'}`);
       return;
@@ -270,17 +275,17 @@ export function TrainerStudentPage() {
             <div className="game-card" style={{ padding: 16, background: '#111827' }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9', marginBottom: 8 }}>Resultado</div>
               <div style={{ fontSize: 13, color: '#94a3b8' }}>
-                {comparePlanWithSession(selectedPlan, selectedSession).status}
+                {comparePlanWithSession(selectedPlan, selectedSession, studentExercises).status}
               </div>
             </div>
 
             <div className="game-card" style={{ padding: 16 }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9', marginBottom: 12 }}>Diferenças encontradas</div>
-              {comparePlanWithSession(selectedPlan, selectedSession).details.length === 0 ? (
+              {comparePlanWithSession(selectedPlan, selectedSession, studentExercises).details.length === 0 ? (
                 <div style={{ color: '#94a3b8' }}>Nenhuma diferença detectada.</div>
               ) : (
                 <ul style={{ paddingLeft: 18, margin: 0, color: '#94a3b8' }}>
-                  {comparePlanWithSession(selectedPlan, selectedSession).details.map((detail, index) => (
+                  {comparePlanWithSession(selectedPlan, selectedSession, studentExercises).details.map((detail, index) => (
                     <li key={index} style={{ marginBottom: 6 }}>{detail}</li>
                   ))}
                 </ul>
