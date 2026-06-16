@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useGameStore } from '../store/gameStore';
 import { Eye, EyeOff, LogIn, Dumbbell, UserCheck } from 'lucide-react';
@@ -177,7 +177,13 @@ export function LoginPage() {
 
           {tab === 'student' && (
             <div style={{ textAlign: 'center', marginTop: 20, fontSize: 13, color: '#64748b' }}>
-              Seu login é criado pelo seu personal trainer.
+              Tem um personal trainer? Ele cria seu login pra você.
+              <div style={{ marginTop: 6 }}>
+                Treina por conta própria?{' '}
+                <Link to="/register" style={{ color: '#a855f7', fontWeight: 600, textDecoration: 'none' }}>
+                  Criar conta
+                </Link>
+              </div>
             </div>
           )}
         </div>
