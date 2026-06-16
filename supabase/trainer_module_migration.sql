@@ -90,3 +90,11 @@ create policy "Trainer reads student workout entries"
     join public.profiles p on p.id = s.user_id
     where s.id = workout_entries.session_id and p.trainer_id = auth.uid()
   ));
+
+-- Allow trainer to read the student's exercise library (needed to resolve
+-- exercise names by id when comparing a prescribed plan to a logged workout —
+-- without this, exercises only had an "own data" policy and the comparison
+-- always showed "Não realizou X" since names could never resolve).
+create policy "Trainer reads student exercises"
+  on public.exercises for select
+  using (exists (select 1 from public.profiles p where p.id = exercises.user_id and p.trainer_id = auth.uid()));
