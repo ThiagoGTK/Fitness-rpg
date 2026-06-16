@@ -99,6 +99,42 @@ function StatItem({ icon, label, value, color = '#a855f7' }: {
   );
 }
 
+function PwdInput({
+  id, label, value, onChange, show, onToggle,
+}: {
+  id: string; label: string; value: string;
+  onChange: (v: string) => void; show: boolean; onToggle: () => void;
+}) {
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <FieldLabel>{label}</FieldLabel>
+      <div style={{ position: 'relative' }}>
+        <input
+          id={id}
+          type={show ? 'text' : 'password'}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          className="game-input"
+          style={{ width: '100%', paddingRight: 44, boxSizing: 'border-box' }}
+          autoComplete="off"
+        />
+        <button
+          type="button"
+          onClick={onToggle}
+          style={{
+            position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: '#64748b', padding: 2, display: 'flex', alignItems: 'center',
+          }}
+          tabIndex={-1}
+        >
+          {show ? <EyeOff size={16} /> : <Eye size={16} />}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Main page ───────────────────────────────────────────────────────────────
 export function ProfilePage() {
   const { user: authUser } = useAuthStore();
@@ -246,43 +282,6 @@ export function ProfilePage() {
 
   // Avatar letter
   const avatarLetter = (user.name || authUser?.email || '?')[0].toUpperCase();
-
-  // ── Shared password input renderer ──
-  function PwdInput({
-    id, label, value, onChange, show, onToggle,
-  }: {
-    id: string; label: string; value: string;
-    onChange: (v: string) => void; show: boolean; onToggle: () => void;
-  }) {
-    return (
-      <div style={{ marginBottom: 14 }}>
-        <FieldLabel>{label}</FieldLabel>
-        <div style={{ position: 'relative' }}>
-          <input
-            id={id}
-            type={show ? 'text' : 'password'}
-            value={value}
-            onChange={e => onChange(e.target.value)}
-            className="game-input"
-            style={{ width: '100%', paddingRight: 44, boxSizing: 'border-box' }}
-            autoComplete="off"
-          />
-          <button
-            type="button"
-            onClick={onToggle}
-            style={{
-              position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
-              background: 'none', border: 'none', cursor: 'pointer',
-              color: '#64748b', padding: 2, display: 'flex', alignItems: 'center',
-            }}
-            tabIndex={-1}
-          >
-            {show ? <EyeOff size={16} /> : <Eye size={16} />}
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="page-wrap fade-in-up">
