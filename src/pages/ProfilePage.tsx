@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
   User, Mail, Lock, Eye, EyeOff, Shield,
-  Flame, Trophy, Dumbbell, Calendar, Star,
-  CheckCircle, XCircle, Save, ChevronDown, ChevronUp, TrendingUp, Trash2, AlertTriangle,
+  Flame, Trophy, Dumbbell, Calendar, Star, Target,
+  CheckCircle, XCircle, Save, ChevronDown, ChevronUp, TrendingUp, Trash2, AlertTriangle, ChevronRight,
 } from 'lucide-react';
 import { format, parseISO, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -622,6 +623,45 @@ export function ProfilePage() {
             </div>
           </div>
         )}
+      </SectionCard>
+
+      {/* ── Conquistas e Recordes ── */}
+      <SectionCard title="Conquistas e Recordes" icon={<Trophy size={18} />}>
+        <div style={{ display: 'grid', gap: 10 }}>
+          <Link to="/achievements" style={{
+            display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none',
+            background: '#0d1526', border: '1px solid #1e2d4a', borderRadius: 10, padding: '14px 16px',
+          }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: 9, background: '#10b98120', border: '1px solid #10b98140',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10b981', flexShrink: 0,
+            }}>
+              <Trophy size={18} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#e2e8f0' }}>Conquistas</div>
+              <div style={{ fontSize: 12, color: '#64748b' }}>{unlockedCount} desbloqueadas</div>
+            </div>
+            <ChevronRight size={18} color="#475569" />
+          </Link>
+
+          <Link to="/records" style={{
+            display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none',
+            background: '#0d1526', border: '1px solid #1e2d4a', borderRadius: 10, padding: '14px 16px',
+          }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: 9, background: '#06b6d420', border: '1px solid #06b6d440',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#06b6d4', flexShrink: 0,
+            }}>
+              <Target size={18} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#e2e8f0' }}>Recordes pessoais</div>
+              <div style={{ fontSize: 12, color: '#64748b' }}>Veja seus melhores resultados por exercício</div>
+            </div>
+            <ChevronRight size={18} color="#475569" />
+          </Link>
+        </div>
       </SectionCard>
 
       {/* ── Estatísticas ── */}

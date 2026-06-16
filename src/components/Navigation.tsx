@@ -30,6 +30,9 @@ export function Navigation() {
     user.role === 'admin'   ? [...NAV, trainerItem, adminItem] :
     user.role === 'trainer' ? [...NAV, trainerItem] :
     NAV;
+  // Mobile bottom bar drops less-frequent items (moved into the Profile page)
+  // to keep the icons from getting cramped on small screens.
+  const mobileNavItems = navItems.filter(item => item.to !== '/achievements' && item.to !== '/records');
 
   const [showLogout,   setShowLogout]   = useState(false);
   const [loggingOut,   setLoggingOut]   = useState(false);
@@ -246,7 +249,7 @@ export function Navigation() {
           overflowX: 'auto',
         }}
       >
-        {navItems.map(({ to, icon: Icon, label }) => {
+        {mobileNavItems.map(({ to, icon: Icon, label }) => {
           const active = to === '/' ? location.pathname === '/' : location.pathname.startsWith(to);
           return (
             <NavLink
