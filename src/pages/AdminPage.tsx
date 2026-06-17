@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { UserPlus, Shield, Loader2, CheckCircle2, XCircle, Eye, EyeOff } from 'lucide-react';
+import { UserPlus, Shield, Loader2, CheckCircle2, XCircle, Eye, EyeOff, Trash2, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface TrainerRow {
@@ -20,6 +20,34 @@ export function AdminPage() {
   const [showPass, setShowPass] = useState(false);
   const [creating, setCreating] = useState(false);
   const [feedback, setFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  const [deleteTarget, setDeleteTarget] = useState<TrainerRow | null>(null);
+  const [deleteConfirmName, setDeleteConfirmName] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [deleteFeedback, setDeleteFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    setDeleteFeedback(null);
+
+    const { data, error } = await supabase.functions.invoke('delete-trainer', {
+      body: { trainerId: deleteTarget.id },
+    });
+
+    if (error || !data?.ok) {
+      setDeleteFeedback({ ok: false, msg: data?.error ?? error?.message ?? 'Erro ao excluir.' });
+    } else {
+      setDeleteFeedback({ ok: true, msg: data.message });
+      await loadTrainers();
+      setTimeout(() => {
+        setDeleteTarget(null);
+        setDeleteConfirmName('');
+        setDeleteFeedback(null);
+      }, 1500);
+    }
+    setDeleting(false);
+  }
 
   async function loadTrainers() {
     setLoadingList(true);
@@ -169,10 +197,103 @@ export function AdminPage() {
                   Aguardando 1º acesso
                 </span>
               )}
+              <button
+                onClick={() => { setDeleteTarget(t); setDeleteConfirmName(''); setDeleteFeedback(null); }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: 6, borderRadius: 6, flexShrink: 0 }}
+                title="Excluir personal"
+              >
+                <Trash2 size={15} color="#ef4444" />
+              </button>
             </div>
           ))}
         </div>
       </div>
+
+      {/* Delete confirmation modal */}
+      {deleteTarget && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.85)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+        }}>
+          <div style={{
+            background: '#111827', border: '1px solid #ef444440', borderRadius: 16,
+            padding: 28, maxWidth: 420, width: '100%',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: '#ef444420', display: 'grid', placeItems: 'center', color: '#ef4444' }}>
+                  <Trash2 size={18} />
+                </div>
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: '#f1f5f9' }}>Excluir personal trainer</h3>
+              </div>
+              <button onClick={() => setDeleteTarget(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <p style={{ margin: '0 0 6px', fontSize: 14, color: '#94a3b8' }}>
+              Você está excluindo <strong style={{ color: '#f1f5f9' }}>{deleteTarget.name}</strong> ({deleteTarget.email}).
+            </p>
+            <p style={{ margin: '0 0 16px', fontSize: 13, color: '#f97316' }}>
+              Todos os alunos serão desvinculados. Os planos de treino prescritos por este personal serão apagados. Esta ação não pode ser desfeita.
+            </p>
+
+            <p style={{ margin: '0 0 8px', fontSize: 13, color: '#94a3b8' }}>
+              Para confirmar, digite o nome: <strong style={{ color: '#f1f5f9' }}>{deleteTarget.name}</strong>
+            </p>
+            <input
+              className="game-input"
+              value={deleteConfirmName}
+              onChange={e => setDeleteConfirmName(e.target.value)}
+              placeholder={deleteTarget.name}
+              style={{ width: '100%', boxSizing: 'border-box', marginBottom: 16 }}
+              autoFocus
+            />
+
+            {deleteFeedback && (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 8, marginBottom: 16,
+                background: deleteFeedback.ok ? '#22c55e15' : '#ef444415',
+                border: `1px solid ${deleteFeedback.ok ? '#22c55e40' : '#ef444440'}`,
+                fontSize: 13, color: deleteFeedback.ok ? '#86efac' : '#fca5a5',
+              }}>
+                {deleteFeedback.ok ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
+                {deleteFeedback.msg}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => { setDeleteTarget(null); setDeleteConfirmName(''); }}
+                disabled={deleting}
+                style={{
+                  flex: 1, padding: '12px', borderRadius: 8,
+                  border: '1px solid #1e2d4a', background: 'transparent',
+                  color: '#94a3b8', fontWeight: 600, fontSize: 14, cursor: 'pointer',
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting || deleteConfirmName.trim() !== deleteTarget.name.trim()}
+                style={{
+                  flex: 1, padding: '12px', borderRadius: 8, border: 'none',
+                  background: '#ef4444', color: 'white', fontWeight: 700, fontSize: 14,
+                  opacity: deleting || deleteConfirmName.trim() !== deleteTarget.name.trim() ? 0.5 : 1,
+                  cursor: deleting ? 'not-allowed' : 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                }}
+              >
+                {deleting
+                  ? <><span style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid #ffffff60', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> Excluindo...</>
+                  : <><Trash2 size={14} /> Excluir personal</>
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
