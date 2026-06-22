@@ -200,40 +200,48 @@ export function AdminPage() {
         <div style={{ display: 'grid', gap: 10 }}>
           {trainers.map(t => (
             <div key={t.id} className="game-card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-              <div style={{
-                width: 42, height: 42, borderRadius: 10, background: '#7c3aed20',
-                display: 'grid', placeItems: 'center', flexShrink: 0,
-              }}>
-                <span style={{ fontSize: 13, fontWeight: 800, color: '#a855f7' }}>{t.trainer_code}</span>
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9' }}>{t.name}</div>
-                <div style={{ fontSize: 12, color: '#64748b' }}>{t.email}</div>
-              </div>
-              <span style={{
-                fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 8,
-                background: t.studentCount > 0 ? '#0ea5e920' : '#1e2d4a',
-                border: `1px solid ${t.studentCount > 0 ? '#0ea5e940' : '#1e2d4a'}`,
-                color: t.studentCount > 0 ? '#38bdf8' : '#475569',
-                flexShrink: 0, whiteSpace: 'nowrap',
-              }}>
-                {t.studentCount} aluno{t.studentCount !== 1 ? 's' : ''}
-              </span>
-              {t.must_change_password && (
-                <span style={{
-                  fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 6,
-                  background: '#f9731620', color: '#fb923c', border: '1px solid #f9731640',
+              {/* Left: code + name/email */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
+                <div style={{
+                  width: 42, height: 42, borderRadius: 10, background: '#7c3aed20',
+                  display: 'grid', placeItems: 'center', flexShrink: 0,
                 }}>
-                  Aguardando 1º acesso
+                  <span style={{ fontSize: 13, fontWeight: 800, color: '#a855f7' }}>{t.trainer_code}</span>
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9' }}>{t.name}</div>
+                  <div style={{ fontSize: 12, color: '#64748b' }}>{t.email}</div>
+                </div>
+              </div>
+
+              {/* Center: student count */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flexShrink: 0 }}>
+                <span style={{ fontSize: 22, fontWeight: 900, color: t.studentCount > 0 ? '#38bdf8' : '#475569', lineHeight: 1 }}>
+                  {t.studentCount}
                 </span>
-              )}
-              <button
-                onClick={() => { setDeleteTarget(t); setDeleteConfirmName(''); setDeleteFeedback(null); }}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: 6, borderRadius: 6, flexShrink: 0 }}
-                title="Excluir personal"
-              >
-                <Trash2 size={15} color="#ef4444" />
-              </button>
+                <span style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>
+                  aluno{t.studentCount !== 1 ? 's' : ''}
+                </span>
+              </div>
+
+              {/* Right: status badge + trash */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                {t.must_change_password && (
+                  <span style={{
+                    fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 6,
+                    background: '#f9731620', color: '#fb923c', border: '1px solid #f9731640',
+                  }}>
+                    Aguardando 1º acesso
+                  </span>
+                )}
+                <button
+                  onClick={() => { setDeleteTarget(t); setDeleteConfirmName(''); setDeleteFeedback(null); }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, borderRadius: 6 }}
+                  title="Excluir personal"
+                >
+                  <Trash2 size={15} color="#ef4444" />
+                </button>
+              </div>
             </div>
           ))}
         </div>
