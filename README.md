@@ -20,6 +20,16 @@
 - 📱 **Mobile-first** — Layout responsivo com barra de navegação inferior enxuta (itens secundários ficam em "Mais opções" no Perfil)
 - 📈 **Evolução** — Gráficos de volume/XP por semana e tabela de progresso de força por exercício (carga, reps e séries: primeiro registro vs. mais recente)
 
+### 🥗 Módulo de Nutrição
+
+- **Resumo diário** — barra de progresso de calorias, macros (proteína/carbs/gorduras) e hidratação
+- **Registro de refeições** — 5 tipos (café da manhã, almoço, lanche, jantar, ceia), cada um com lista de alimentos e macros opcionais
+- **Rastreamento de água** — botões de adição rápida (150ml–750ml), quantidade personalizada e log do dia
+- **Calculadora de macros** — fórmula Mifflin-St Jeor: calcula TMB, TDEE e distribui macros conforme objetivo e nível de atividade; resultado salvo como metas pessoais
+- **Histórico de peso corporal** — registro por data com delta entre entradas e variação total
+- **Gamificação nutricional** — XP por refeição registrada, meta de água atingida e peso logado; conquistas de primeiro registro
+- **4 objetivos** — Ganho de massa, Emagrecimento, Manutenção e Definição (ajustam calorias e macros automaticamente)
+
 ### 🧑‍💼 Módulo Personal Trainer
 
 - **3 papéis**: `admin`, `trainer` (personal) e `student` (aluno)
@@ -32,6 +42,7 @@
 - Personal pode excluir planos quando quiser
 - Aluno troca de senha obrigatoriamente no primeiro acesso
 - Admin cria personal trainers com **código PT único** (PT-001, PT-002…)
+- Admin pode **excluir personal trainers** (com confirmação por nome); alunos são desvinculados e planos removidos automaticamente
 - Pessoas sem personal podem criar conta própria e usar o app normalmente (vínculo é opcional)
 
 ---
@@ -55,9 +66,9 @@
 
 | Papel | Acesso |
 |-------|--------|
-| `student` | App completo (treinos, histórico, conquistas, perfil) |
+| `student` | App completo (treinos, histórico, conquistas, nutrição, perfil) |
 | `trainer` | Tudo do aluno + painel `/trainer` (alunos, planos prescritos) |
-| `admin` | Tudo do trainer + painel `/admin` (criar/listar personal trainers) |
+| `admin` | Tudo do trainer + painel `/admin` (criar/excluir personal trainers) |
 
 - O **admin** cria contas de personal trainer via painel Admin
 - O **personal** cria contas de aluno via painel Personal — o aluno já nasce vinculado
@@ -95,6 +106,7 @@ src/
 │   ├── RecordsPage.tsx
 │   ├── WeeklyPlanPage.tsx
 │   ├── EvolutionPage.tsx      # Gráficos de progresso (acesso restrito por enquanto)
+│   ├── NutritionPage.tsx      # Nutrição: resumo, refeições, calculadora, peso
 │   ├── TrainerDashboard.tsx   # Painel do personal
 │   ├── TrainerStudentsPage.tsx
 │   ├── TrainerStudentPage.tsx
@@ -107,10 +119,14 @@ src/
 ├── store/
 │   ├── authStore.ts         # Estado de autenticação (Zustand)
 │   ├── gameStore.ts         # Estado do jogo / dados do usuário (Zustand)
+│   ├── nutritionStore.ts    # Estado do módulo de nutrição
 │   ├── trainerStore.ts      # Estado do módulo personal trainer
 │   └── weeklyStore.ts       # Estado do plano semanal
 ├── types/
-│   └── index.ts
+│   ├── index.ts
+│   └── nutrition.ts         # Tipos do módulo de nutrição
+├── utils/
+│   └── nutritionCalc.ts     # Fórmulas BMR/TDEE + constantes XP nutrição
 └── App.tsx                  # Rotas e CSS global
 ```
 
@@ -153,6 +169,9 @@ adiciona tabelas `trainer_plans` e `trainer_plan_exercises`, colunas `trainer_id
 
 **Script do sistema de papéis** — [`supabase/role_system_migration.sql`](supabase/role_system_migration.sql):
 adiciona `role` (admin/trainer/student), `trainer_code`, `must_change_password` e reescreve as políticas RLS com função `is_admin()` para evitar recursão.
+
+**Script do módulo de nutrição** — [`supabase/nutrition_migration.sql`](supabase/nutrition_migration.sql):
+cria as tabelas `meal_entries`, `water_logs`, `weight_logs` e `nutrition_goals` com RLS e índices.
 
 > Após rodar os scripts, defina o papel de admin diretamente no SQL:
 > ```sql
@@ -298,13 +317,15 @@ create trigger on_auth_user_created
 
 </details>
 
-### 4. Deploy da Edge Function
+### 4. Deploy das Edge Functions
 
 ```bash
 supabase functions deploy create-user
+supabase functions deploy delete-trainer
 ```
 
-Necessária para o admin criar personal trainers e para o personal criar alunos com senha temporária e vínculo automático.
+- `create-user` — cria personal trainers (admin) e alunos (personal) com senha temporária e vínculo automático
+- `delete-trainer` — exclui personal trainer: desvincula alunos, remove planos e deleta a conta (admin only)
 
 ### 5. Desative a confirmação de e-mail
 
