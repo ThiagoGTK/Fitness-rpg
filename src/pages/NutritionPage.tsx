@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Apple, Droplets, Scale, Calculator, ChevronDown, ChevronUp,
   Plus, Trash2, X, Check, TrendingDown, TrendingUp, Minus,
-  Flame, Loader2, Trophy,
+  Flame, Loader2, Trophy, Search,
 } from 'lucide-react';
+import { TACO, searchTaco, scaleTaco, type TacoFood } from '../data/taco';
 import { useNutritionStore } from '../store/nutritionStore';
 import { useAuthStore } from '../store/authStore';
 import { useGameStore } from '../store/gameStore';
@@ -593,20 +594,61 @@ function AddFoodModal({
   const { addMealEntry } = useNutritionStore();
   const [saving, setSaving] = useState(false);
 
-  const [foodName,   setFoodName]   = useState('');
-  const [quantityG,  setQuantityG]  = useState('');
-  const [calories,   setCalories]   = useState('');
-  const [protein,    setProtein]    = useState('');
-  const [carbs,      setCarbs]      = useState('');
-  const [fats,       setFats]       = useState('');
+  // Search state
+  const [query,       setQuery]       = useState('');
+  const [suggestions, setSuggestions] = useState<TacoFood[]>([]);
+  const [tacoFood,    setTacoFood]    = useState<TacoFood | null>(null); // selected from TACO
+  const searchRef = useRef<HTMLDivElement>(null);
+
+  // Form fields
+  const [foodName,  setFoodName]  = useState('');
+  const [quantityG, setQuantityG] = useState('100');
+  const [calories,  setCalories]  = useState('');
+  const [protein,   setProtein]   = useState('');
+  const [carbs,     setCarbs]     = useState('');
+  const [fats,      setFats]      = useState('');
+
+  // Update suggestions as the user types
+  useEffect(() => {
+    if (tacoFood) { setSuggestions([]); return; } // already selected
+    setSuggestions(searchTaco(query));
+  }, [query, tacoFood]);
+
+  // Recalculate macros when quantity changes (only when a TACO food is selected)
+  useEffect(() => {
+    if (!tacoFood) return;
+    const g = Number(quantityG) || 100;
+    const scaled = scaleTaco(tacoFood, g);
+    setCalories(String(scaled.calories));
+    setProtein(String(scaled.protein));
+    setCarbs(String(scaled.carbs));
+    setFats(String(scaled.fats));
+  }, [tacoFood, quantityG]);
+
+  function selectTacoFood(food: TacoFood) {
+    setTacoFood(food);
+    setQuery(food.name);
+    setFoodName(food.name);
+    setSuggestions([]);
+    // macros will be set by the useEffect above
+  }
+
+  function clearTacoSelection() {
+    setTacoFood(null);
+    setQuery('');
+    setFoodName('');
+    setCalories(''); setProtein(''); setCarbs(''); setFats('');
+    setQuantityG('100');
+  }
 
   async function handleSave() {
-    if (!foodName.trim()) return;
+    const name = foodName.trim() || query.trim();
+    if (!name) return;
     setSaving(true);
     await addMealEntry({
       date,
       mealType,
-      foodName: foodName.trim(),
+      foodName:  name,
       quantityG: quantityG ? Number(quantityG) : undefined,
       calories:  Number(calories)  || 0,
       protein:   Number(protein)   || 0,
@@ -617,6 +659,8 @@ function AddFoodModal({
     onClose();
   }
 
+  const canSave = !!(foodName.trim() || query.trim());
+
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 300, background: 'rgba(0,0,0,0.85)',
@@ -624,7 +668,8 @@ function AddFoodModal({
     }}>
       <div style={{
         background: '#111827', border: '1px solid #1e2d4a',
-        borderRadius: 16, padding: 24, maxWidth: 400, width: '100%',
+        borderRadius: 16, padding: 24, maxWidth: 420, width: '100%',
+        maxHeight: '90vh', overflowY: 'auto',
       }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
@@ -639,83 +684,131 @@ function AddFoodModal({
           </button>
         </div>
 
-        {/* Form */}
-        <div style={{ display: 'grid', gap: 12 }}>
-          <div>
+        <div style={{ display: 'grid', gap: 14 }}>
+
+          {/* ── TACO search ─────────────────────────────────────────────── */}
+          <div ref={searchRef} style={{ position: 'relative' }}>
             <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 4 }}>
-              Nome do alimento <span style={{ color: '#ef4444' }}>*</span>
+              Buscar na tabela TACO
+              <span style={{ marginLeft: 6, fontSize: 10, color: '#334155', fontWeight: 400 }}>
+                {TACO.length} alimentos brasileiros
+              </span>
             </label>
-            <input
-              className="game-input"
-              value={foodName}
-              onChange={e => setFoodName(e.target.value)}
-              placeholder="Ex: Frango grelhado"
-              autoFocus
-              style={{ width: '100%', boxSizing: 'border-box' }}
-            />
+            <div style={{ position: 'relative' }}>
+              <Search size={14} color="#475569" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+              <input
+                className="game-input"
+                value={query}
+                onChange={e => { setQuery(e.target.value); if (tacoFood) setTacoFood(null); setFoodName(e.target.value); }}
+                placeholder="Frango, arroz, banana…"
+                autoFocus
+                style={{ width: '100%', boxSizing: 'border-box', paddingLeft: 34 }}
+              />
+              {query && (
+                <button
+                  onClick={clearTacoSelection}
+                  style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#475569' }}
+                >
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+
+            {/* Suggestions dropdown */}
+            {suggestions.length > 0 && (
+              <div style={{
+                position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10,
+                background: '#0d1526', border: '1px solid #1e2d4a', borderRadius: 10,
+                marginTop: 4, overflow: 'hidden', boxShadow: '0 8px 24px #00000060',
+              }}>
+                {suggestions.map(food => (
+                  <button
+                    key={food.id}
+                    onClick={() => selectTacoFood(food)}
+                    style={{
+                      width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer',
+                      borderBottom: '1px solid #1e2d4a20', textAlign: 'left',
+                      transition: 'background 0.1s',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#1e2d4a')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                  >
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#e2e8f0' }}>{food.name}</div>
+                      <div style={{ fontSize: 11, color: '#475569', marginTop: 1 }}>{food.category}</div>
+                    </div>
+                    <div style={{ fontSize: 11, color: '#f97316', fontWeight: 700, flexShrink: 0, marginLeft: 8 }}>
+                      {food.kcal} kcal
+                      <span style={{ color: '#334155', fontWeight: 400 }}>/100g</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
+          {/* Selected TACO food badge */}
+          {tacoFood && (
+            <div style={{
+              padding: '8px 12px', borderRadius: 8,
+              background: '#10b98115', border: '1px solid #10b98130',
+              display: 'flex', alignItems: 'center', gap: 8,
+            }}>
+              <Check size={14} color="#10b981" />
+              <span style={{ fontSize: 12, color: '#86efac', flex: 1 }}>
+                Macros calculados da TACO para {quantityG || 100}g
+              </span>
+              <span style={{ fontSize: 11, color: '#475569' }}>
+                {tacoFood.kcal} kcal/100g
+              </span>
+            </div>
+          )}
+
+          {/* Quantity — always shown; controls TACO scaling when food is selected */}
           <div>
-            <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 4 }}>Quantidade (g) — opcional</label>
+            <label style={{ display: 'block', fontSize: 12, color: '#94a3b8', marginBottom: 4 }}>
+              Quantidade (g)
+              {tacoFood && <span style={{ marginLeft: 6, fontSize: 10, color: '#10b981' }}>↳ recalcula macros automaticamente</span>}
+            </label>
             <input
               className="game-input"
               type="number"
               value={quantityG}
               onChange={e => setQuantityG(e.target.value)}
-              placeholder="Ex: 150"
+              placeholder="100"
               min={1}
               style={{ width: '100%', boxSizing: 'border-box' }}
             />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <div>
-              <label style={{ display: 'block', fontSize: 12, color: '#f97316', marginBottom: 4 }}>Calorias (kcal)</label>
-              <input
-                className="game-input"
-                type="number"
-                value={calories}
-                onChange={e => setCalories(e.target.value)}
-                placeholder="0"
-                min={0}
-                style={{ width: '100%', boxSizing: 'border-box' }}
-              />
+          {/* Macro fields — pre-filled when TACO selected, editable */}
+          <div>
+            <div style={{ fontSize: 12, color: '#64748b', marginBottom: 8 }}>
+              Macros
+              {!tacoFood && <span style={{ marginLeft: 6, fontSize: 10 }}>— preencha manualmente ou selecione da TACO acima</span>}
             </div>
-            <div>
-              <label style={{ display: 'block', fontSize: 12, color: '#a855f7', marginBottom: 4 }}>Proteína (g)</label>
-              <input
-                className="game-input"
-                type="number"
-                value={protein}
-                onChange={e => setProtein(e.target.value)}
-                placeholder="0"
-                min={0}
-                style={{ width: '100%', boxSizing: 'border-box' }}
-              />
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: 12, color: '#0ea5e9', marginBottom: 4 }}>Carboidratos (g)</label>
-              <input
-                className="game-input"
-                type="number"
-                value={carbs}
-                onChange={e => setCarbs(e.target.value)}
-                placeholder="0"
-                min={0}
-                style={{ width: '100%', boxSizing: 'border-box' }}
-              />
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: 12, color: '#eab308', marginBottom: 4 }}>Gorduras (g)</label>
-              <input
-                className="game-input"
-                type="number"
-                value={fats}
-                onChange={e => setFats(e.target.value)}
-                placeholder="0"
-                min={0}
-                style={{ width: '100%', boxSizing: 'border-box' }}
-              />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              {[
+                { label: 'Calorias (kcal)', color: '#f97316', value: calories, set: setCalories },
+                { label: 'Proteína (g)',    color: '#a855f7', value: protein,  set: setProtein  },
+                { label: 'Carboidratos (g)',color: '#0ea5e9', value: carbs,    set: setCarbs    },
+                { label: 'Gorduras (g)',    color: '#eab308', value: fats,     set: setFats     },
+              ].map(f => (
+                <div key={f.label}>
+                  <label style={{ display: 'block', fontSize: 12, color: f.color, marginBottom: 4 }}>{f.label}</label>
+                  <input
+                    className="game-input"
+                    type="number"
+                    value={f.value}
+                    onChange={e => f.set(e.target.value)}
+                    placeholder="0"
+                    min={0}
+                    step={0.1}
+                    style={{ width: '100%', boxSizing: 'border-box' }}
+                  />
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -734,12 +827,9 @@ function AddFoodModal({
           </button>
           <button
             onClick={handleSave}
-            disabled={!foodName.trim() || saving}
+            disabled={!canSave || saving}
             className="btn-primary"
-            style={{
-              flex: 2, justifyContent: 'center',
-              opacity: !foodName.trim() ? 0.5 : 1,
-            }}
+            style={{ flex: 2, justifyContent: 'center', opacity: !canSave ? 0.5 : 1 }}
           >
             {saving
               ? <><Loader2 size={14} style={{ animation: 'spin 0.8s linear infinite' }} /> Salvando...</>
