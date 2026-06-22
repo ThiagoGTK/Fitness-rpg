@@ -3,13 +3,14 @@ import { LevelBadge } from '../components/ui/LevelBadge';
 import { XPBar } from '../components/ui/XPBar';
 import { xpForMuscleLevel, xpForUserLevel } from '../services/levelCalculator';
 import { calcVolume } from '../services/xpCalculator';
-import { Zap, Flame, Trophy, Calendar, TrendingUp, Star, Dumbbell, Clock, ClipboardList } from 'lucide-react';
+import { Zap, Flame, Trophy, Calendar, TrendingUp, Star, Dumbbell, Clock, ClipboardList, Apple, Droplets } from 'lucide-react';
 import { format, parseISO, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
-import { BodyMap } from '../components/BodyMap';
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { useNutritionStore } from '../store/nutritionStore';
+import { useAuthStore } from '../store/authStore';
 
 interface TodayPlanExercise {
   id: string;
@@ -52,6 +53,112 @@ function StatCard({ icon, label, value, color = '#a855f7', sub }: {
       </div>
       <div style={{ fontSize: 24, fontWeight: 800, color: '#f1f5f9' }}>{value}</div>
       {sub && <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{sub}</div>}
+    </div>
+  );
+}
+
+function MiniProgressBar({ value, max, color }: { value: number; max: number; color: string }) {
+  const pct = max > 0 ? Math.min((value / max) * 100, 100) : 0;
+  return (
+    <div style={{ height: 5, borderRadius: 3, background: '#1e2d4a', overflow: 'hidden', flex: 1 }}>
+      <div style={{ height: '100%', borderRadius: 3, background: color, width: `${pct}%`, transition: 'width 0.4s ease' }} />
+    </div>
+  );
+}
+
+function NutritionWidget() {
+  const { user: authUser } = useAuthStore();
+  const { goals, initialized, loading, initNutritionData, getDailySummary, getWaterTotalForDate } = useNutritionStore();
+  const navigate = useNavigate();
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+
+  useEffect(() => {
+    if (authUser?.id && !initialized && !loading) {
+      initNutritionData(authUser.id);
+    }
+  }, [authUser?.id, initialized, loading]);
+
+  const summary  = getDailySummary(todayStr);
+  const waterMl  = getWaterTotalForDate(todayStr);
+  const g = goals ?? { dailyCalories: 2000, proteinG: 150, carbsG: 200, fatsG: 65, waterMl: 2500 };
+
+  const calPct   = g.dailyCalories > 0 ? Math.round((summary.calories / g.dailyCalories) * 100) : 0;
+  const waterPct = g.waterMl       > 0 ? Math.round((waterMl / g.waterMl) * 100) : 0;
+  const hasData  = summary.calories > 0 || waterMl > 0;
+
+  return (
+    <div className="game-card" style={{
+      padding: '18px 20px', marginBottom: 16,
+      background: 'linear-gradient(135deg, #111827 0%, #0a1f18 100%)',
+      border: '1px solid #10b98130',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: hasData ? 16 : 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 34, height: 34, borderRadius: 10, background: '#10b98120', display: 'grid', placeItems: 'center', color: '#10b981', flexShrink: 0 }}>
+            <Apple size={17} />
+          </div>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: '#e2e8f0' }}>Nutrição hoje</div>
+            {!hasData && (
+              <div style={{ fontSize: 12, color: '#475569', marginTop: 1 }}>Nenhum registro ainda</div>
+            )}
+          </div>
+        </div>
+        <button
+          onClick={() => navigate('/nutrition')}
+          style={{
+            fontSize: 12, fontWeight: 700, padding: '5px 12px', borderRadius: 8,
+            border: '1px solid #10b98140', background: '#10b98110', color: '#10b981', cursor: 'pointer',
+          }}
+        >
+          {hasData ? 'Ver detalhes →' : 'Registrar →'}
+        </button>
+      </div>
+
+      {hasData && (
+        <div style={{ display: 'grid', gap: 10 }}>
+          {/* Calories */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 11, color: '#f97316', fontWeight: 700, width: 60, flexShrink: 0 }}>
+              {Math.round(summary.calories)} kcal
+            </span>
+            <MiniProgressBar value={summary.calories} max={g.dailyCalories} color="#f97316" />
+            <span style={{ fontSize: 10, color: calPct >= 100 ? '#10b981' : '#475569', width: 28, textAlign: 'right', flexShrink: 0 }}>
+              {calPct}%
+            </span>
+          </div>
+
+          {/* Macros row */}
+          <div style={{ display: 'flex', gap: 10 }}>
+            {[
+              { label: 'P', value: summary.protein, goal: g.proteinG, color: '#a855f7' },
+              { label: 'C', value: summary.carbs,   goal: g.carbsG,   color: '#0ea5e9' },
+              { label: 'G', value: summary.fats,    goal: g.fatsG,    color: '#eab308' },
+            ].map(m => (
+              <div key={m.label} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: 10, color: m.color, fontWeight: 700 }}>{m.label}</span>
+                  <span style={{ fontSize: 10, color: '#475569' }}>{Math.round(m.value)}g</span>
+                </div>
+                <MiniProgressBar value={m.value} max={m.goal} color={m.color} />
+              </div>
+            ))}
+          </div>
+
+          {/* Water */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Droplets size={12} color="#0ea5e9" style={{ flexShrink: 0 }} />
+            <span style={{ fontSize: 11, color: '#38bdf8', fontWeight: 700, width: 52, flexShrink: 0 }}>
+              {(waterMl / 1000).toFixed(1).replace('.', ',')}L
+            </span>
+            <MiniProgressBar value={waterMl} max={g.waterMl} color="#0ea5e9" />
+            <span style={{ fontSize: 10, color: waterPct >= 100 ? '#10b981' : '#475569', width: 28, textAlign: 'right', flexShrink: 0 }}>
+              {waterPct}%
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -285,10 +392,8 @@ export function Dashboard() {
         <StatCard icon={<Calendar size={16} />} label="Treinos" value={workouts.length} color="#06b6d4" />
       </div>
 
-      {/* Body map */}
-      <div className="game-card" style={{ padding: '16px', marginBottom: 16 }}>
-        <BodyMap />
-      </div>
+      {/* Nutrition widget */}
+      <NutritionWidget />
 
       <div className="grid-cards">
         {/* Top muscles */}

@@ -2,6 +2,7 @@ import { useGameStore } from '../store/gameStore';
 import { LevelBadge } from '../components/ui/LevelBadge';
 import { XPBar } from '../components/ui/XPBar';
 import { xpForMuscleLevel } from '../services/levelCalculator';
+import { BodyMap } from '../components/BodyMap';
 
 export function MusclesPage() {
   const { muscles, exercises, workouts } = useGameStore();
@@ -35,6 +36,11 @@ export function MusclesPage() {
         <p style={{ margin: '2px 0 0', color: '#64748b', fontSize: 13 }}>
           Acompanhe a evolução de cada músculo
         </p>
+      </div>
+
+      {/* Interactive body map */}
+      <div className="game-card" style={{ padding: '16px', marginBottom: 16 }}>
+        <BodyMap />
       </div>
 
       {/* Summary */}
