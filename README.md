@@ -12,7 +12,7 @@
 - ⚡ **Sistema de XP e Níveis** — Cada exercício e grupo muscular tem seu próprio nível que evolui com o treino
 - 💪 **13 grupos musculares** — Peitoral, Costas, Ombros, Bíceps, Tríceps, Antebraços, Core, Glúteos, Quadríceps, Isquiotibiais, Panturrilhas, Trapézio e Latíssimo
 - 🗺️ **Mapa corporal interativo** — Visualize frente e costas com indicadores de nível e calor de treino por músculo
-- 🏆 **17 conquistas** — Desbloqueie medalhas por marcos de treino, sequências e recordes
+- 🏆 **29 conquistas** — Desbloqueie medalhas por marcos de treino, sequências, recordes e hábitos nutricionais
 - 🎯 **Recordes pessoais (PRs)** — Rastreamento automático de carga máxima, volume, repetições e séries
 - 📊 **Histórico completo** — Todos os treinos com XP ganho, volume total e evolução por data
 - 🔥 **Sistema de sequência (streak)** — Dias consecutivos de treino, com 3 dias de tolerância antes de perder a sequência (quebra no 4º dia sem treinar, mesmo sem abrir o app)
@@ -28,7 +28,7 @@
 - **Rastreamento de água** — botões de adição rápida (150ml–750ml), quantidade personalizada e log do dia
 - **Calculadora de macros** — fórmula Mifflin-St Jeor: calcula TMB, TDEE e distribui macros conforme objetivo e nível de atividade; resultado salvo como metas pessoais
 - **Histórico de peso corporal** — registro por data com delta entre entradas e variação total
-- **Gamificação nutricional** — XP por refeição registrada, meta de água atingida e peso logado; conquistas de primeiro registro
+- **Gamificação nutricional** — XP por refeição registrada, meta de água atingida e peso logado; **12 conquistas exclusivas** de nutrição (primeiros registros, sequências de 7 e 21 dias, metas de proteína, calorias e hidratação, contagem de pesagens)
 - **4 objetivos** — Ganho de massa, Emagrecimento, Manutenção e Definição (ajustam calorias e macros automaticamente)
 - **Plano alimentar prescrito** — se o aluno tiver um personal, o card "Dieta prescrita" aparece no Resumo com os alimentos por refeição, macros por item e total diário (expansível)
 
