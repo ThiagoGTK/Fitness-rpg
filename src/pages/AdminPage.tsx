@@ -8,6 +8,7 @@ interface TrainerRow {
   email: string;
   trainer_code: string;
   must_change_password: boolean;
+  studentCount: number;
 }
 
 export function AdminPage() {
@@ -57,7 +58,27 @@ export function AdminPage() {
       .eq('role', 'trainer')
       .order('trainer_code', { ascending: true });
 
-    if (!error) setTrainers((data ?? []) as TrainerRow[]);
+    if (error || !data) { setLoadingList(false); return; }
+
+    const trainerIds = data.map(t => t.id as string);
+    const studentCounts: Record<string, number> = {};
+
+    if (trainerIds.length > 0) {
+      const { data: students } = await supabase
+        .from('profiles')
+        .select('trainer_id')
+        .in('trainer_id', trainerIds);
+
+      for (const s of students ?? []) {
+        const tid = s.trainer_id as string;
+        studentCounts[tid] = (studentCounts[tid] ?? 0) + 1;
+      }
+    }
+
+    setTrainers(data.map(t => ({
+      ...(t as any),
+      studentCount: studentCounts[t.id as string] ?? 0,
+    })) as TrainerRow[]);
     setLoadingList(false);
   }
 
@@ -189,6 +210,15 @@ export function AdminPage() {
                 <div style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9' }}>{t.name}</div>
                 <div style={{ fontSize: 12, color: '#64748b' }}>{t.email}</div>
               </div>
+              <span style={{
+                fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 8,
+                background: t.studentCount > 0 ? '#0ea5e920' : '#1e2d4a',
+                border: `1px solid ${t.studentCount > 0 ? '#0ea5e940' : '#1e2d4a'}`,
+                color: t.studentCount > 0 ? '#38bdf8' : '#475569',
+                flexShrink: 0, whiteSpace: 'nowrap',
+              }}>
+                {t.studentCount} aluno{t.studentCount !== 1 ? 's' : ''}
+              </span>
               {t.must_change_password && (
                 <span style={{
                   fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 6,
