@@ -203,10 +203,14 @@ export function AdminPage() {
               {/* Left: code + name/email */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
                 <div style={{
-                  width: 42, height: 42, borderRadius: 10, background: '#7c3aed20',
-                  display: 'grid', placeItems: 'center', flexShrink: 0,
+                  width: 44, height: 44, borderRadius: 10, background: '#7c3aed20',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0, gap: 1,
                 }}>
-                  <span style={{ fontSize: 13, fontWeight: 800, color: '#a855f7' }}>{t.trainer_code}</span>
+                  <span style={{ fontSize: 9, fontWeight: 700, color: '#7c3aed', lineHeight: 1, letterSpacing: '0.06em' }}>PT</span>
+                  <span style={{ fontSize: 14, fontWeight: 900, color: '#a855f7', lineHeight: 1 }}>
+                    {t.trainer_code.replace('PT-', '')}
+                  </span>
                 </div>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 700, color: '#f1f5f9' }}>{t.name}</div>
