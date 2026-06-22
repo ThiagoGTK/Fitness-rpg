@@ -1,27 +1,34 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 import type { Exercise, TrainerPlan, TrainerPlanExercise, TrainerStudentSummary, UserProfile, WorkoutSession } from '../types';
+import type { TrainerDietPlan, TrainerDietPlanItem, MealType, NutritionObjective } from '../types/nutrition';
 
 interface TrainerStore {
   students: TrainerStudentSummary[];
   plans: TrainerPlan[];
+  dietPlans: TrainerDietPlan[];
   studentDetails: {
     profile: UserProfile;
     plans: TrainerPlan[];
     workouts: WorkoutSession[];
     exercises: Exercise[];
+    dietPlans: TrainerDietPlan[];
   } | null;
   loading: boolean;
   initialized: boolean;
   initTrainer: () => Promise<void>;
   loadStudents: () => Promise<void>;
   loadPlans: (studentId?: string) => Promise<void>;
+  loadDietPlans: (studentId?: string) => Promise<void>;
   loadStudentDetail: (studentId: string) => Promise<void>;
   addStudentByEmail: (email: string) => Promise<string | null>;
   unlinkStudent: (studentId: string) => Promise<void>;
   createPlan: (studentId: string, planName: string, scheduledDate: string | undefined, notes: string, exercises: TrainerPlanExercise[]) => Promise<string | null>;
   updatePlan: (planId: string, planName: string, scheduledDate: string | undefined, notes: string, exercises: TrainerPlanExercise[]) => Promise<void>;
   deletePlan: (planId: string) => Promise<void>;
+  createDietPlan: (studentId: string, planName: string, objective: NutritionObjective, notes: string, items: Omit<TrainerDietPlanItem, 'id' | 'planId'>[]) => Promise<string | null>;
+  updateDietPlan: (planId: string, planName: string, objective: NutritionObjective, notes: string, items: Omit<TrainerDietPlanItem, 'id' | 'planId'>[]) => Promise<void>;
+  deleteDietPlan: (planId: string) => Promise<void>;
   clearTrainer: () => void;
 }
 
@@ -43,6 +50,38 @@ function mapPlanExerciseRow(row: Record<string, unknown>): TrainerPlanExercise {
   };
 }
 
+function mapDietPlanItemRow(row: Record<string, unknown>): TrainerDietPlanItem {
+  return {
+    id:         row.id as string,
+    planId:     row.plan_id as string,
+    mealType:   (row.meal_type as MealType) ?? 'breakfast',
+    foodName:   (row.food_name as string) ?? '',
+    quantityG:  row.quantity_g != null ? parseFloat(row.quantity_g as string) : undefined,
+    calories:   parseFloat((row.calories as string | number) as string) || 0,
+    protein:    parseFloat((row.protein  as string | number) as string) || 0,
+    carbs:      parseFloat((row.carbs    as string | number) as string) || 0,
+    fats:       parseFloat((row.fats     as string | number) as string) || 0,
+    notes:      (row.notes as string) ?? '',
+    orderIndex: (row.order_index as number) ?? 0,
+  };
+}
+
+function mapDietPlanRow(row: Record<string, unknown>): TrainerDietPlan {
+  return {
+    id:        row.id as string,
+    trainerId: row.trainer_id as string,
+    studentId: row.student_id as string,
+    planName:  (row.plan_name as string) ?? '',
+    objective: (row.objective as NutritionObjective) ?? 'maintenance',
+    notes:     (row.notes as string) ?? '',
+    items:     ((row.trainer_diet_plan_items as Record<string, unknown>[]) ?? [])
+                 .sort((a, b) => ((a.order_index as number) ?? 0) - ((b.order_index as number) ?? 0))
+                 .map(mapDietPlanItemRow),
+    createdAt: (row.created_at as string) ?? new Date().toISOString(),
+    updatedAt: (row.updated_at as string) ?? new Date().toISOString(),
+  };
+}
+
 function mapPlanRow(row: Record<string, unknown>): TrainerPlan {
   return {
     id: row.id as string,
@@ -60,6 +99,7 @@ function mapPlanRow(row: Record<string, unknown>): TrainerPlan {
 export const useTrainerStore = create<TrainerStore>()((set, get) => ({
   students: [],
   plans: [],
+  dietPlans: [],
   studentDetails: null,
   loading: false,
   initialized: false,
@@ -68,6 +108,7 @@ export const useTrainerStore = create<TrainerStore>()((set, get) => ({
     set({ loading: true });
     await get().loadStudents();
     await get().loadPlans();
+    await get().loadDietPlans();
     set({ loading: false, initialized: true });
   },
 
@@ -151,6 +192,28 @@ export const useTrainerStore = create<TrainerStore>()((set, get) => ({
     set({ plans, loading: false });
   },
 
+  loadDietPlans: async (studentId) => {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) return;
+
+    let query = supabase
+      .from('trainer_diet_plans')
+      .select('*, trainer_diet_plan_items(*)')
+      .eq('trainer_id', authUser.id)
+      .order('updated_at', { ascending: false });
+
+    if (studentId) query = query.eq('student_id', studentId);
+
+    const res = await query;
+    if (res.error) {
+      console.error('[trainerStore] loadDietPlans error:', res.error);
+      return;
+    }
+
+    const dietPlans: TrainerDietPlan[] = (res.data ?? []).map(mapDietPlanRow);
+    set({ dietPlans });
+  },
+
   loadStudentDetail: async (studentId) => {
     set({ loading: true });
     const { data: { user: authUser } } = await supabase.auth.getUser();
@@ -198,10 +261,18 @@ export const useTrainerStore = create<TrainerStore>()((set, get) => ({
       return;
     }
 
-    const exercisesRes = await supabase
-      .from('exercises')
-      .select('id,name,primary_muscle_id,secondary_muscles,type,notes,level,current_xp,total_xp_earned,times_performed,created_at')
-      .eq('user_id', studentId);
+    const [exercisesRes, dietPlansRes] = await Promise.all([
+      supabase
+        .from('exercises')
+        .select('id,name,primary_muscle_id,secondary_muscles,type,notes,level,current_xp,total_xp_earned,times_performed,created_at')
+        .eq('user_id', studentId),
+      supabase
+        .from('trainer_diet_plans')
+        .select('*, trainer_diet_plan_items(*)')
+        .eq('trainer_id', authUser.id)
+        .eq('student_id', studentId)
+        .order('updated_at', { ascending: false }),
+    ]);
 
     if (exercisesRes.error) {
       console.error('[trainerStore] loadStudentDetail exercises error:', exercisesRes.error);
@@ -260,7 +331,9 @@ export const useTrainerStore = create<TrainerStore>()((set, get) => ({
       createdAt: (row.created_at as string) ?? new Date().toISOString(),
     }));
 
-    set({ studentDetails: { profile, plans, workouts, exercises }, loading: false });
+    const dietPlans: TrainerDietPlan[] = (dietPlansRes.data ?? []).map(mapDietPlanRow);
+
+    set({ studentDetails: { profile, plans, workouts, exercises, dietPlans }, loading: false });
   },
 
   addStudentByEmail: async (email) => {
@@ -425,7 +498,91 @@ export const useTrainerStore = create<TrainerStore>()((set, get) => ({
     await get().loadStudents();
   },
 
+  createDietPlan: async (studentId, planName, objective, notes, items) => {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) return null;
+
+    const { data: planRow, error: planErr } = await supabase
+      .from('trainer_diet_plans')
+      .insert({ trainer_id: authUser.id, student_id: studentId, plan_name: planName, objective, notes })
+      .select()
+      .single();
+
+    if (planErr || !planRow) {
+      console.error('[trainerStore] createDietPlan error:', planErr);
+      return null;
+    }
+
+    if (items.length > 0) {
+      const rows = items.map((item, idx) => ({
+        plan_id:     planRow.id,
+        meal_type:   item.mealType,
+        food_name:   item.foodName,
+        quantity_g:  item.quantityG ?? null,
+        calories:    item.calories,
+        protein:     item.protein,
+        carbs:       item.carbs,
+        fats:        item.fats,
+        notes:       item.notes,
+        order_index: idx,
+      }));
+      const { error: itemErr } = await supabase.from('trainer_diet_plan_items').insert(rows);
+      if (itemErr) console.error('[trainerStore] createDietPlan items error:', itemErr);
+    }
+
+    await get().loadDietPlans(studentId);
+    return planRow.id as string;
+  },
+
+  updateDietPlan: async (planId, planName, objective, notes, items) => {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) return;
+
+    const { error: planErr } = await supabase
+      .from('trainer_diet_plans')
+      .update({ plan_name: planName, objective, notes, updated_at: new Date().toISOString() })
+      .eq('id', planId)
+      .eq('trainer_id', authUser.id);
+
+    if (planErr) { console.error('[trainerStore] updateDietPlan error:', planErr); return; }
+
+    await supabase.from('trainer_diet_plan_items').delete().eq('plan_id', planId);
+
+    if (items.length > 0) {
+      const rows = items.map((item, idx) => ({
+        plan_id:     planId,
+        meal_type:   item.mealType,
+        food_name:   item.foodName,
+        quantity_g:  item.quantityG ?? null,
+        calories:    item.calories,
+        protein:     item.protein,
+        carbs:       item.carbs,
+        fats:        item.fats,
+        notes:       item.notes,
+        order_index: idx,
+      }));
+      const { error: itemErr } = await supabase.from('trainer_diet_plan_items').insert(rows);
+      if (itemErr) console.error('[trainerStore] updateDietPlan items error:', itemErr);
+    }
+
+    await get().loadDietPlans();
+  },
+
+  deleteDietPlan: async (planId) => {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) return;
+
+    const { error } = await supabase
+      .from('trainer_diet_plans')
+      .delete()
+      .eq('id', planId)
+      .eq('trainer_id', authUser.id);
+
+    if (error) console.error('[trainerStore] deleteDietPlan error:', error);
+    await get().loadDietPlans();
+  },
+
   clearTrainer: () => {
-    set({ students: [], plans: [], studentDetails: null, loading: false, initialized: false });
+    set({ students: [], plans: [], dietPlans: [], studentDetails: null, loading: false, initialized: false });
   },
 }));

@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { ArrowLeft, PlusCircle, Trash2, ArrowUp, ArrowDown, Minus, CheckCircle2, XCircle } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Trash2, ArrowUp, ArrowDown, Minus, CheckCircle2, XCircle, Salad } from 'lucide-react';
 import { useTrainerStore } from '../store/trainerStore';
 import type { Exercise } from '../types';
 import type { TrainerPlan, WorkoutSession } from '../types';
+import { MEAL_LABELS, MEAL_EMOJIS, OBJECTIVE_LABELS, OBJECTIVE_COLORS, type MealType } from '../types/nutrition';
 
 const DAY_LABELS: Record<number, string> = { 0: 'Dom', 1: 'Seg', 2: 'Ter', 3: 'Qua', 4: 'Qui', 5: 'Sex', 6: 'Sáb' };
 
@@ -135,10 +136,13 @@ function ExerciseComparisonCard({ c }: { c: ExerciseComparison }) {
 export function TrainerStudentPage() {
   const { studentId } = useParams();
   const navigate = useNavigate();
-  const { studentDetails, loadStudentDetail, deletePlan, loading } = useTrainerStore();
+  const { studentDetails, loadStudentDetail, deletePlan, deleteDietPlan, loading } = useTrainerStore();
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  const [confirmDeleteDietId, setConfirmDeleteDietId] = useState<string | null>(null);
+  const [deletingDiet, setDeletingDiet] = useState(false);
 
   async function handleDeletePlan(planId: string) {
     setDeleting(true);
@@ -147,6 +151,14 @@ export function TrainerStudentPage() {
     if (selectedPlanId === planId) setSelectedPlanId(null);
     setConfirmDeleteId(null);
     setDeleting(false);
+  }
+
+  async function handleDeleteDietPlan(planId: string) {
+    setDeletingDiet(true);
+    await deleteDietPlan(planId);
+    if (studentId) await loadStudentDetail(studentId);
+    setConfirmDeleteDietId(null);
+    setDeletingDiet(false);
   }
 
   const studentExercises = studentDetails?.exercises ?? [];
@@ -160,9 +172,10 @@ export function TrainerStudentPage() {
     if (studentId) loadStudentDetail(studentId);
   }, [studentId]);
 
-  const student = studentDetails?.profile;
-  const plans = studentDetails?.plans ?? [];
-  const workouts = studentDetails?.workouts ?? [];
+  const student   = studentDetails?.profile;
+  const plans     = studentDetails?.plans     ?? [];
+  const workouts  = studentDetails?.workouts  ?? [];
+  const dietPlans = studentDetails?.dietPlans ?? [];
   const latestWorkout = workouts[0];
 
   const selectedPlan = useMemo(() => plans.find(plan => plan.id === selectedPlanId) ?? plans[0], [plans, selectedPlanId]);
@@ -202,9 +215,14 @@ export function TrainerStudentPage() {
             Acompanhe planos, histórico e compare a prescrição com o treino realmente registrado.
           </p>
         </div>
-        <Link className="btn-primary" to={`/trainer/students/${studentId}/plans/new`}>
-          <PlusCircle size={16} /> Novo plano
-        </Link>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <Link className="btn-primary" to={`/trainer/students/${studentId}/plans/new`}>
+            <PlusCircle size={16} /> Novo plano
+          </Link>
+          <Link className="btn-secondary" to={`/trainer/students/${studentId}/diet/new`}>
+            <Salad size={16} /> Nova dieta
+          </Link>
+        </div>
       </div>
 
       <div className="grid-stat" style={{ marginBottom: 20 }}>
@@ -332,6 +350,117 @@ export function TrainerStudentPage() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* ── Diet plans section ──────────────────────────────────────────────── */}
+      <div className="game-card" style={{ padding: 20, marginTop: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#f1f5f9', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Salad size={18} color="#10b981" /> Planos alimentares
+          </h2>
+          <Link className="btn-secondary" style={{ fontSize: 12, padding: '6px 12px' }} to={`/trainer/students/${studentId}/diet/new`}>
+            <PlusCircle size={13} /> Nova dieta
+          </Link>
+        </div>
+
+        {dietPlans.length === 0 ? (
+          <div style={{ color: '#94a3b8', fontSize: 14 }}>
+            Nenhum plano alimentar criado ainda. Use o botão "Nova dieta" para prescrever uma dieta.
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gap: 12 }}>
+            {dietPlans.map(plan => {
+              const totalCal = plan.items.reduce((a, i) => a + i.calories, 0);
+              const totalProt = plan.items.reduce((a, i) => a + i.protein, 0);
+              const mealCounts = plan.items.reduce<Record<MealType, number>>((acc, i) => {
+                acc[i.mealType] = (acc[i.mealType] ?? 0) + 1;
+                return acc;
+              }, {} as Record<MealType, number>);
+
+              return (
+                <div key={plan.id} className="game-card" style={{ padding: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: '#f1f5f9' }}>{plan.planName || 'Plano sem nome'}</div>
+                        <span style={{
+                          fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 6,
+                          background: `${OBJECTIVE_COLORS[plan.objective]}20`,
+                          border: `1px solid ${OBJECTIVE_COLORS[plan.objective]}40`,
+                          color: OBJECTIVE_COLORS[plan.objective],
+                        }}>
+                          {OBJECTIVE_LABELS[plan.objective]}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', gap: 14, marginTop: 6, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 12, color: '#f97316' }}>{Math.round(totalCal)} kcal/dia</span>
+                        <span style={{ fontSize: 12, color: '#a855f7' }}>{totalProt.toFixed(0)}g proteína</span>
+                        <span style={{ fontSize: 12, color: '#475569' }}>{plan.items.length} alimento{plan.items.length !== 1 ? 's' : ''}</span>
+                      </div>
+                      {/* Meal summary pills */}
+                      <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+                        {(Object.entries(mealCounts) as [MealType, number][]).map(([mt, count]) => (
+                          <span key={mt} style={{
+                            fontSize: 11, padding: '2px 8px', borderRadius: 6,
+                            background: '#111827', border: '1px solid #1e2d4a', color: '#64748b',
+                          }}>
+                            {MEAL_EMOJIS[mt]} {MEAL_LABELS[mt]} ({count})
+                          </span>
+                        ))}
+                      </div>
+                      {plan.notes && (
+                        <div style={{ fontSize: 12, color: '#475569', marginTop: 6, fontStyle: 'italic' }}>
+                          {plan.notes}
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                      <Link
+                        className="btn-ghost"
+                        style={{ fontSize: 12, padding: '6px 12px', justifyContent: 'center' }}
+                        to={`/trainer/students/${studentId}/diet/${plan.id}/edit`}
+                      >
+                        Editar
+                      </Link>
+                      <button
+                        className="btn-ghost"
+                        style={{ color: '#ef4444', padding: '6px 10px' }}
+                        onClick={() => setConfirmDeleteDietId(plan.id)}
+                        title="Excluir plano alimentar"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {confirmDeleteDietId === plan.id && (
+                    <div style={{
+                      marginTop: 12, padding: '10px 14px', borderRadius: 8,
+                      background: '#ef444415', border: '1px solid #ef444440',
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap',
+                    }}>
+                      <span style={{ fontSize: 13, color: '#fca5a5' }}>
+                        Excluir "{plan.planName || 'plano'}" permanentemente?
+                      </span>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button className="btn-secondary" style={{ fontSize: 12, padding: '6px 12px' }} onClick={() => setConfirmDeleteDietId(null)} disabled={deletingDiet}>
+                          Cancelar
+                        </button>
+                        <button
+                          style={{ fontSize: 12, padding: '6px 12px', borderRadius: 8, border: 'none', background: '#ef4444', color: '#fff', fontWeight: 700, cursor: 'pointer', opacity: deletingDiet ? 0.7 : 1 }}
+                          onClick={() => handleDeleteDietPlan(plan.id)}
+                          disabled={deletingDiet}
+                        >
+                          {deletingDiet ? 'Excluindo...' : 'Excluir'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {selectedPlan && (

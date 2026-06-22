@@ -2,12 +2,14 @@ import { useState, useEffect, useRef } from 'react';
 import {
   Apple, Droplets, Scale, Calculator, ChevronDown, ChevronUp,
   Plus, Trash2, X, Check, TrendingDown, TrendingUp, Minus,
-  Flame, Loader2, Trophy, Search,
+  Flame, Loader2, Trophy, Search, Salad,
 } from 'lucide-react';
 import { TACO, searchTaco, scaleTaco, type TacoFood } from '../data/taco';
 import { useNutritionStore } from '../store/nutritionStore';
 import { useAuthStore } from '../store/authStore';
 import { useGameStore } from '../store/gameStore';
+import { supabase } from '../lib/supabase';
+import type { TrainerDietPlan } from '../types/nutrition';
 import {
   calculateMacros,
   WATER_PRESETS,
@@ -139,12 +141,53 @@ export function NutritionPage() {
 
   const [tab, setTab] = useState<Tab>('summary');
   const [selectedDate, setSelectedDate] = useState(today());
+  const [prescribedPlan, setPrescribedPlan] = useState<TrainerDietPlan | null>(null);
 
   useEffect(() => {
     if (authUser?.id && !initialized) {
       initNutritionData(authUser.id);
     }
   }, [authUser?.id, initialized]);
+
+  useEffect(() => {
+    if (!authUser?.id) return;
+    supabase
+      .from('trainer_diet_plans')
+      .select('*, trainer_diet_plan_items(*)')
+      .eq('student_id', authUser.id)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!data) return;
+        const r = data as Record<string, unknown>;
+        setPrescribedPlan({
+          id:        r.id as string,
+          trainerId: r.trainer_id as string,
+          studentId: r.student_id as string,
+          planName:  (r.plan_name as string) ?? '',
+          objective: (r.objective as any) ?? 'maintenance',
+          notes:     (r.notes as string) ?? '',
+          items:     ((r.trainer_diet_plan_items as any[]) ?? [])
+            .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
+            .map((i: any) => ({
+              id:         i.id,
+              planId:     i.plan_id,
+              mealType:   i.meal_type,
+              foodName:   i.food_name,
+              quantityG:  i.quantity_g != null ? parseFloat(i.quantity_g) : undefined,
+              calories:   parseFloat(i.calories) || 0,
+              protein:    parseFloat(i.protein)  || 0,
+              carbs:      parseFloat(i.carbs)    || 0,
+              fats:       parseFloat(i.fats)     || 0,
+              notes:      i.notes ?? '',
+              orderIndex: i.order_index ?? 0,
+            })),
+          createdAt: r.created_at as string,
+          updatedAt: r.updated_at as string,
+        });
+      });
+  }, [authUser?.id]);
 
   // Dismiss achievements after 4 s
   useEffect(() => {
@@ -238,6 +281,7 @@ export function NutritionPage() {
           goals={g}
           selectedDate={selectedDate}
           goalObjective={goals?.objective ?? 'maintenance'}
+          prescribedPlan={prescribedPlan}
         />
       )}
 
@@ -273,19 +317,138 @@ export function NutritionPage() {
 // Summary Tab
 // ══════════════════════════════════════════════════════════════════════════════
 
+// ── Prescribed diet card (trainer → student) ─────────────────────────────────
+
+const MEAL_ORDER_DISPLAY: MealType[] = ['breakfast', 'lunch', 'snack', 'dinner', 'supper'];
+
+function PrescribedDietCard({ plan }: { plan: TrainerDietPlan }) {
+  const [expanded, setExpanded] = useState(false);
+
+  const totalCal  = plan.items.reduce((a, i) => a + i.calories, 0);
+  const totalProt = plan.items.reduce((a, i) => a + i.protein,  0);
+  const totalCarbs = plan.items.reduce((a, i) => a + i.carbs,  0);
+  const totalFats = plan.items.reduce((a, i) => a + i.fats,    0);
+
+  const itemsByMeal = MEAL_ORDER_DISPLAY.reduce<Record<MealType, typeof plan.items>>((acc, mt) => {
+    acc[mt] = plan.items.filter(i => i.mealType === mt);
+    return acc;
+  }, {} as Record<MealType, typeof plan.items>);
+
+  return (
+    <div className="game-card" style={{
+      padding: '14px 16px',
+      borderLeft: `3px solid ${OBJECTIVE_COLORS[plan.objective]}`,
+      background: 'linear-gradient(135deg, #111827 0%, #0d1a0f 100%)',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+          <div style={{
+            width: 32, height: 32, borderRadius: 8,
+            background: `${OBJECTIVE_COLORS[plan.objective]}20`,
+            display: 'grid', placeItems: 'center', flexShrink: 0,
+          }}>
+            <Salad size={16} color={OBJECTIVE_COLORS[plan.objective]} />
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 11, color: '#475569', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Dieta prescrita pelo personal
+            </div>
+            <div style={{ fontSize: 14, fontWeight: 800, color: '#e2e8f0', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {plan.planName}
+            </div>
+          </div>
+        </div>
+        <button
+          onClick={() => setExpanded(e => !e)}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', flexShrink: 0 }}
+        >
+          {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </button>
+      </div>
+
+      {/* Macro summary row */}
+      <div style={{ display: 'flex', gap: 14, marginTop: 10, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color: '#f97316' }}>{Math.round(totalCal)} kcal</span>
+        <span style={{ fontSize: 12, color: '#a855f7' }}>{totalProt.toFixed(0)}g prot</span>
+        <span style={{ fontSize: 12, color: '#0ea5e9' }}>{totalCarbs.toFixed(0)}g carbs</span>
+        <span style={{ fontSize: 12, color: '#eab308' }}>{totalFats.toFixed(0)}g gord</span>
+        <span style={{ fontSize: 12, color: '#475569' }}>{plan.items.length} alimentos</span>
+      </div>
+
+      {/* Notes */}
+      {plan.notes && (
+        <div style={{ fontSize: 12, color: '#475569', marginTop: 8, fontStyle: 'italic', borderTop: '1px solid #1e2d4a', paddingTop: 8 }}>
+          {plan.notes}
+        </div>
+      )}
+
+      {/* Expanded: meals */}
+      {expanded && (
+        <div style={{ marginTop: 14, display: 'grid', gap: 12 }}>
+          {MEAL_ORDER_DISPLAY.map(mt => {
+            const mealItems = itemsByMeal[mt];
+            if (mealItems.length === 0) return null;
+            const mealCal = mealItems.reduce((a, i) => a + i.calories, 0);
+            return (
+              <div key={mt}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                  <span style={{ fontSize: 15 }}>{MEAL_EMOJIS[mt]}</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#94a3b8' }}>{MEAL_LABELS[mt]}</span>
+                  <span style={{ fontSize: 11, color: '#475569', marginLeft: 4 }}>{Math.round(mealCal)} kcal</span>
+                </div>
+                <div style={{ display: 'grid', gap: 6 }}>
+                  {mealItems.map(item => (
+                    <div key={item.id} style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '7px 10px', borderRadius: 8,
+                      background: '#0d1526', border: '1px solid #1e2d4a', gap: 8,
+                    }}>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: '#e2e8f0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {item.foodName}
+                          {item.quantityG && <span style={{ color: '#475569', fontWeight: 400 }}> · {item.quantityG}g</span>}
+                        </div>
+                        {item.notes && <div style={{ fontSize: 11, color: '#334155', marginTop: 1 }}>{item.notes}</div>}
+                      </div>
+                      <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                        <span style={{ fontSize: 11, color: '#f97316', fontWeight: 700 }}>{item.calories} kcal</span>
+                        <span style={{ fontSize: 11, color: '#a855f7' }}>{item.protein}g P</span>
+                        <span style={{ fontSize: 11, color: '#0ea5e9' }}>{item.carbs}g C</span>
+                        <span style={{ fontSize: 11, color: '#eab308' }}>{item.fats}g G</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Summary Tab
+// ══════════════════════════════════════════════════════════════════════════════
+
 function SummaryTab({
-  summary, goals, selectedDate, goalObjective,
+  summary, goals, selectedDate, goalObjective, prescribedPlan,
 }: {
   summary: { calories: number; protein: number; carbs: number; fats: number; waterMl: number };
   goals: { dailyCalories: number; proteinG: number; carbsG: number; fatsG: number; waterMl: number };
   selectedDate: string;
   goalObjective: NutritionObjective;
+  prescribedPlan?: TrainerDietPlan | null;
 }) {
   const waterPct = goals.waterMl > 0 ? Math.min(Math.round((summary.waterMl / goals.waterMl) * 100), 100) : 0;
   const calPct   = goals.dailyCalories > 0 ? Math.round((summary.calories / goals.dailyCalories) * 100) : 0;
 
   return (
     <div style={{ display: 'grid', gap: 14 }}>
+      {/* Prescribed diet (trainer → student) */}
+      {prescribedPlan && <PrescribedDietCard plan={prescribedPlan} />}
+
       {/* Nutritional objective banner */}
       <div className="game-card" style={{
         padding: '14px 18px',

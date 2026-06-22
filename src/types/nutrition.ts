@@ -98,6 +98,34 @@ export interface DailyNutritionSummary {
   waterMl:  number;
 }
 
+// ── Trainer diet plan types ───────────────────────────────────────────────────
+
+export interface TrainerDietPlanItem {
+  id:         string;
+  planId:     string;
+  mealType:   MealType;
+  foodName:   string;
+  quantityG?: number;
+  calories:   number;
+  protein:    number;
+  carbs:      number;
+  fats:       number;
+  notes:      string;
+  orderIndex: number;
+}
+
+export interface TrainerDietPlan {
+  id:        string;
+  trainerId: string;
+  studentId: string;
+  planName:  string;
+  objective: NutritionObjective;
+  notes:     string;
+  items:     TrainerDietPlanItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 // ── RPG Attribute integration (prepared for future) ──────────────────────────
 // TODO: Wire these into the RPG system when attributes module is created.
 // - Força (Strength):    boosted by workout XP + daily protein goal met

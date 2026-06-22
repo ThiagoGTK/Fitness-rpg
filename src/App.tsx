@@ -18,6 +18,7 @@ import { TrainerDashboard } from './pages/TrainerDashboard';
 import { TrainerStudentsPage } from './pages/TrainerStudentsPage';
 import { TrainerStudentPage } from './pages/TrainerStudentPage';
 import { TrainerPlanForm } from './pages/TrainerPlanForm';
+import { TrainerDietPlanForm } from './pages/TrainerDietPlanForm';
 import { AdminPage } from './pages/AdminPage';
 import { ChangePasswordPage } from './pages/ChangePasswordPage';
 import { useAuthStore } from './store/authStore';
@@ -212,6 +213,8 @@ export default function App() {
           <Route path="/trainer/students/:studentId" element={<TrainerGuard><TrainerStudentPage /></TrainerGuard>} />
           <Route path="/trainer/students/:studentId/plans/new" element={<TrainerGuard><TrainerPlanForm /></TrainerGuard>} />
           <Route path="/trainer/students/:studentId/plans/:planId/edit" element={<TrainerGuard><TrainerPlanForm /></TrainerGuard>} />
+          <Route path="/trainer/students/:studentId/diet/new" element={<TrainerGuard><TrainerDietPlanForm /></TrainerGuard>} />
+          <Route path="/trainer/students/:studentId/diet/:dietPlanId/edit" element={<TrainerGuard><TrainerDietPlanForm /></TrainerGuard>} />
           <Route path="/admin" element={<AdminGuard><AdminPage /></AdminGuard>} />
         </Route>
       </Routes>
