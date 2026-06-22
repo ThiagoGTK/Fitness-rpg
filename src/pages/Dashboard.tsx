@@ -132,9 +132,9 @@ function NutritionWidget() {
           {/* Macros row */}
           <div style={{ display: 'flex', gap: 10 }}>
             {[
-              { label: 'P', value: summary.protein, goal: g.proteinG, color: '#a855f7' },
-              { label: 'C', value: summary.carbs,   goal: g.carbsG,   color: '#0ea5e9' },
-              { label: 'G', value: summary.fats,    goal: g.fatsG,    color: '#eab308' },
+              { label: 'Prot.', value: summary.protein, goal: g.proteinG, color: '#a855f7' },
+              { label: 'Carbs', value: summary.carbs,   goal: g.carbsG,   color: '#0ea5e9' },
+              { label: 'Gord.', value: summary.fats,    goal: g.fatsG,    color: '#eab308' },
             ].map(m => (
               <div key={m.label} style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
