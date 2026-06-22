@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Dumbbell, List, PlusCircle, History,
-  Trophy, Target, CalendarDays, Zap, LogOut, User, UserPlus, Shield, TrendingUp,
+  Trophy, Target, CalendarDays, Zap, LogOut, User, UserPlus, Shield, TrendingUp, Apple,
 } from 'lucide-react';
 import { useGameStore } from '../store/gameStore';
 import { useAuthStore } from '../store/authStore';
@@ -18,6 +18,7 @@ const NAV = [
   { to: '/records',     icon: Target,          label: 'Recordes'  },
   { to: '/weekly',      icon: CalendarDays,    label: 'Semanal'   },
   { to: '/evolution',   icon: TrendingUp,      label: 'Evolução'  },
+  { to: '/nutrition',   icon: Apple,           label: 'Nutrição'  },
 ];
 
 export function Navigation() {

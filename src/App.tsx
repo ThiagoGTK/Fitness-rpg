@@ -13,6 +13,7 @@ import { RecordsPage } from './pages/RecordsPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { WeeklyPlanPage } from './pages/WeeklyPlanPage';
 import { EvolutionPage } from './pages/EvolutionPage';
+import { NutritionPage } from './pages/NutritionPage';
 import { TrainerDashboard } from './pages/TrainerDashboard';
 import { TrainerStudentsPage } from './pages/TrainerStudentsPage';
 import { TrainerStudentPage } from './pages/TrainerStudentPage';
@@ -205,6 +206,7 @@ export default function App() {
           <Route path="/profile"      element={<ProfilePage />} />
           <Route path="/weekly"       element={<WeeklyPlanPage />} />
           <Route path="/evolution"    element={<EvolutionPage />} />
+          <Route path="/nutrition"    element={<NutritionPage />} />
           <Route path="/trainer"      element={<TrainerGuard><TrainerDashboard /></TrainerGuard>} />
           <Route path="/trainer/students" element={<TrainerGuard><TrainerStudentsPage /></TrainerGuard>} />
           <Route path="/trainer/students/:studentId" element={<TrainerGuard><TrainerStudentPage /></TrainerGuard>} />
