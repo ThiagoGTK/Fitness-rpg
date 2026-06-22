@@ -62,6 +62,48 @@ interface NutritionStore {
   getDailySummary:       (date: string) => DailyNutritionSummary;
 }
 
+// ── Streak helpers ────────────────────────────────────────────────────────────
+
+function maxConsecutiveDays(sortedUniqueDates: string[]): number {
+  if (sortedUniqueDates.length === 0) return 0;
+  let max = 1, curr = 1;
+  for (let i = 1; i < sortedUniqueDates.length; i++) {
+    const diff = Math.round(
+      (new Date(sortedUniqueDates[i]).getTime() - new Date(sortedUniqueDates[i - 1]).getTime()) / 86400000
+    );
+    if (diff === 1) { curr++; if (curr > max) max = curr; }
+    else curr = 1;
+  }
+  return max;
+}
+
+function mealStreak(entries: MealEntry[]): number {
+  const days = [...new Set(entries.map(e => e.date))].sort();
+  return maxConsecutiveDays(days);
+}
+
+function waterGoalStreak(logs: WaterLog[], goalMl: number): number {
+  const byDate: Record<string, number> = {};
+  for (const l of logs) byDate[l.date] = (byDate[l.date] ?? 0) + l.amountMl;
+  const days = Object.keys(byDate).filter(d => byDate[d] >= goalMl).sort();
+  return maxConsecutiveDays(days);
+}
+
+function proteinGoalStreak(entries: MealEntry[], goalG: number): number {
+  const byDate: Record<string, number> = {};
+  for (const e of entries) byDate[e.date] = (byDate[e.date] ?? 0) + e.protein;
+  const days = Object.keys(byDate).filter(d => byDate[d] >= goalG).sort();
+  return maxConsecutiveDays(days);
+}
+
+function calorieGoalStreak(entries: MealEntry[], goalKcal: number): number {
+  const low = goalKcal * 0.9, high = goalKcal * 1.1;
+  const byDate: Record<string, number> = {};
+  for (const e of entries) byDate[e.date] = (byDate[e.date] ?? 0) + e.calories;
+  const days = Object.keys(byDate).filter(d => byDate[d] >= low && byDate[d] <= high).sort();
+  return maxConsecutiveDays(days);
+}
+
 // ── Helper: add XP and sync game store ───────────────────────────────────────
 
 async function awardXP(userId: string, amount: number) {
@@ -83,14 +125,20 @@ async function unlockAchievement(
   achievementId: string,
   set: (fn: (s: NutritionStore) => Partial<NutritionStore>) => void,
 ) {
+  const now = new Date().toISOString();
   const { error } = await supabase.from('user_achievements').insert({
     user_id:        userId,
     achievement_id: achievementId,
-    unlocked_at:    new Date().toISOString(),
+    unlocked_at:    now,
   });
-  // Ignore duplicate key error (achievement already unlocked)
   if (!error) {
     set(s => ({ newAchievements: [...s.newAchievements, achievementId] }));
+    // Sync into gameStore so AchievementsPage reflects it without a page reload
+    useGameStore.setState(s => ({
+      achievements: s.achievements.map(a =>
+        a.id === achievementId && !a.unlockedAt ? { ...a, unlockedAt: now } : a
+      ),
+    }));
   }
 }
 
@@ -231,13 +279,32 @@ export const useNutritionStore = create<NutritionStore>((set, get) => ({
 
     set(s => ({ mealEntries: [entry, ...s.mealEntries] }));
 
-    // Award XP for logging a meal entry
     await awardXP(userId, NUTRITION_XP.ADD_MEAL_ENTRY);
 
-    // Unlock "first meal" achievement if this is the first
     const allEntries = get().mealEntries;
-    if (allEntries.length === 1) {
-      await unlockAchievement(userId, NUTRITION_ACHIEVEMENT_IDS.FIRST_MEAL, set);
+    const goals = get().goals;
+
+    if (allEntries.length === 1) await unlockAchievement(userId, NUTRITION_ACHIEVEMENT_IDS.FIRST_MEAL, set);
+
+    // Count milestones — query DB total to cover entries older than the 60-day window
+    const { count: totalMeals } = await supabase
+      .from('meal_entries')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId);
+    if ((totalMeals ?? 0) >= 10) await unlockAchievement(userId, NUTRITION_ACHIEVEMENT_IDS.MEALS_10, set);
+    if ((totalMeals ?? 0) >= 50) await unlockAchievement(userId, NUTRITION_ACHIEVEMENT_IDS.MEALS_50, set);
+
+    // Streak milestones (60-day window is enough for any streak up to 60)
+    const streak = mealStreak(allEntries);
+    if (streak >= 7)  await unlockAchievement(userId, NUTRITION_ACHIEVEMENT_IDS.STREAK_MEALS_7, set);
+    if (streak >= 21) await unlockAchievement(userId, NUTRITION_ACHIEVEMENT_IDS.STREAK_MEALS_21, set);
+
+    if (goals) {
+      const pStreak = proteinGoalStreak(allEntries, goals.proteinG);
+      if (pStreak >= 7) await unlockAchievement(userId, NUTRITION_ACHIEVEMENT_IDS.PROTEIN_GOAL_7, set);
+
+      const cStreak = calorieGoalStreak(allEntries, goals.dailyCalories);
+      if (cStreak >= 7) await unlockAchievement(userId, NUTRITION_ACHIEVEMENT_IDS.CALORIE_GOAL_7, set);
     }
   },
 
@@ -270,22 +337,19 @@ export const useNutritionStore = create<NutritionStore>((set, get) => ({
 
     set(s => ({ waterLogs: [log, ...s.waterLogs] }));
 
-    // Award XP + check goal
     await awardXP(userId, NUTRITION_XP.ADD_MEAL_ENTRY / 2); // 5 XP per glass
 
-    // Unlock first water achievement if first log ever
     const allLogs = get().waterLogs;
-    if (allLogs.length === 1) {
-      await unlockAchievement(userId, NUTRITION_ACHIEVEMENT_IDS.FIRST_WATER, set);
-    }
+    if (allLogs.length === 1) await unlockAchievement(userId, NUTRITION_ACHIEVEMENT_IDS.FIRST_WATER, set);
 
-    // Bonus XP if water goal just reached
     const goals = get().goals;
     if (goals) {
       const total = get().getWaterTotalForDate(date);
       if (total >= goals.waterMl && total - amountMl < goals.waterMl) {
         await awardXP(userId, NUTRITION_XP.HIT_WATER_GOAL);
       }
+      const wStreak = waterGoalStreak(allLogs, goals.waterMl);
+      if (wStreak >= 7) await unlockAchievement(userId, NUTRITION_ACHIEVEMENT_IDS.WATER_GOAL_7, set);
     }
   },
 
@@ -321,11 +385,9 @@ export const useNutritionStore = create<NutritionStore>((set, get) => ({
 
     await awardXP(userId, NUTRITION_XP.LOG_WEIGHT);
 
-    // First weight log achievement
     const allLogs = get().weightLogs;
-    if (allLogs.length === 1) {
-      await unlockAchievement(userId, NUTRITION_ACHIEVEMENT_IDS.FIRST_WEIGHT, set);
-    }
+    if (allLogs.length === 1)  await unlockAchievement(userId, NUTRITION_ACHIEVEMENT_IDS.FIRST_WEIGHT, set);
+    if (allLogs.length >= 10) await unlockAchievement(userId, NUTRITION_ACHIEVEMENT_IDS.WEIGHT_10, set);
   },
 
   deleteWeightLog: async (id: string) => {

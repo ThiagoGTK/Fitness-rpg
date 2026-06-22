@@ -105,17 +105,19 @@ export const NUTRITION_XP = {
 } as const;
 
 // ── Nutrition achievement IDs ─────────────────────────────────────────────────
-// These map to rows in user_achievements. Prefixed with "nutrition_" to avoid
-// collisions with workout achievements.
 export const NUTRITION_ACHIEVEMENT_IDS = {
   FIRST_MEAL:       'nutrition_first_meal',
+  MEALS_10:         'nutrition_meals_10',
+  MEALS_50:         'nutrition_meals_50',
+  STREAK_MEALS_7:   'nutrition_streak_meals_7',
+  STREAK_MEALS_21:  'nutrition_streak_meals_21',
+  PROTEIN_GOAL_7:   'nutrition_protein_goal_7',
+  CALORIE_GOAL_7:   'nutrition_calorie_goal_7',
   FIRST_WATER:      'nutrition_first_water',
+  WATER_GOAL_7:     'nutrition_water_goal_7',
   FIRST_WEIGHT:     'nutrition_first_weight',
+  WEIGHT_10:        'nutrition_weight_10',
   GOALS_SET:        'nutrition_goals_set',
-  // TODO: 7-day streaks — requires checking consecutive dates in meal/water logs
-  // STREAK_MEALS_7:   'nutrition_streak_meals_7',
-  // STREAK_PROTEIN_7: 'nutrition_streak_protein_7',
-  // STREAK_WATER_7:   'nutrition_streak_water_7',
 } as const;
 
 // ── Water portion presets (ml) ────────────────────────────────────────────────
