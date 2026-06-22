@@ -24,11 +24,13 @@
 
 - **Resumo diário** — barra de progresso de calorias, macros (proteína/carbs/gorduras) e hidratação
 - **Registro de refeições** — 5 tipos (café da manhã, almoço, lanche, jantar, ceia), cada um com lista de alimentos e macros opcionais
+- **Tabela TACO integrada** — 130 alimentos brasileiros (UNICAMP, 4ª ed.) com busca por autocomplete (sem acento obrigatório); selecionar um alimento preenche os macros automaticamente; alterar a quantidade recalcula em tempo real; entrada manual disponível como fallback
 - **Rastreamento de água** — botões de adição rápida (150ml–750ml), quantidade personalizada e log do dia
 - **Calculadora de macros** — fórmula Mifflin-St Jeor: calcula TMB, TDEE e distribui macros conforme objetivo e nível de atividade; resultado salvo como metas pessoais
 - **Histórico de peso corporal** — registro por data com delta entre entradas e variação total
 - **Gamificação nutricional** — XP por refeição registrada, meta de água atingida e peso logado; conquistas de primeiro registro
 - **4 objetivos** — Ganho de massa, Emagrecimento, Manutenção e Definição (ajustam calorias e macros automaticamente)
+- **Plano alimentar prescrito** — se o aluno tiver um personal, o card "Dieta prescrita" aparece no Resumo com os alimentos por refeição, macros por item e total diário (expansível)
 
 ### 🧑‍💼 Módulo Personal Trainer
 
@@ -39,10 +41,13 @@
 - Personal pode **criar um exercício novo direto no formulário do plano**, sem sair da tela
 - Aluno vê um card **"Treino de hoje"** no dashboard quando há um plano agendado para o dia — registrar o treino já vem com os exercícios pré-preenchidos
 - Personal compara o prescrito vs. realizado em **cards por exercício** (séries/reps/peso/volume, com badges de variação) e um resumo de % de adesão ao plano
-- Personal pode excluir planos quando quiser
+- Personal monta **planos alimentares prescritos** com 5 seções de refeição (café da manhã, almoço, lanche, jantar, ceia) — cada alimento usa a busca TACO com preenchimento automático de macros; quantidade ajustável por item
+- Aluno vê o **plano alimentar** em um card colapsável na aba Resumo de Nutrição, com macros por alimento e total diário
+- Personal pode excluir planos de treino e alimentares quando quiser
 - Aluno troca de senha obrigatoriamente no primeiro acesso
 - Admin cria personal trainers com **código PT único** (PT-001, PT-002…)
 - Admin pode **excluir personal trainers** (com confirmação por nome); alunos são desvinculados e planos removidos automaticamente
+- Admin vê o **número de alunos** de cada personal diretamente no painel, destacado em azul
 - Pessoas sem personal podem criar conta própria e usar o app normalmente (vínculo é opcional)
 
 ---
@@ -90,7 +95,8 @@ src/
 │       ├── LevelUpModal.tsx
 │       └── XPBar.tsx
 ├── data/
-│   └── seedData.ts          # Dados iniciais (músculos e exercícios padrão)
+│   ├── seedData.ts          # Dados iniciais (músculos e exercícios padrão)
+│   └── taco.ts              # 130 alimentos TACO (UNICAMP) + searchTaco() + scaleTaco()
 ├── lib/
 │   └── supabase.ts          # Cliente Supabase
 ├── pages/
@@ -105,12 +111,13 @@ src/
 │   ├── AchievementsPage.tsx
 │   ├── RecordsPage.tsx
 │   ├── WeeklyPlanPage.tsx
-│   ├── EvolutionPage.tsx      # Gráficos de progresso (acesso restrito por enquanto)
-│   ├── NutritionPage.tsx      # Nutrição: resumo, refeições, calculadora, peso
+│   ├── EvolutionPage.tsx      # Gráficos de progresso
+│   ├── NutritionPage.tsx      # Nutrição: resumo, refeições (TACO), calculadora, peso
 │   ├── TrainerDashboard.tsx   # Painel do personal
 │   ├── TrainerStudentsPage.tsx
-│   ├── TrainerStudentPage.tsx
-│   ├── TrainerPlanForm.tsx
+│   ├── TrainerStudentPage.tsx # Detalhe do aluno: treinos + planos de treino + planos alimentares
+│   ├── TrainerPlanForm.tsx    # Formulário de plano de treino
+│   ├── TrainerDietPlanForm.tsx # Formulário de plano alimentar (com busca TACO)
 │   └── AdminPage.tsx
 ├── services/
 │   ├── achievementChecker.ts
@@ -120,11 +127,11 @@ src/
 │   ├── authStore.ts         # Estado de autenticação (Zustand)
 │   ├── gameStore.ts         # Estado do jogo / dados do usuário (Zustand)
 │   ├── nutritionStore.ts    # Estado do módulo de nutrição
-│   ├── trainerStore.ts      # Estado do módulo personal trainer
+│   ├── trainerStore.ts      # Estado do módulo personal trainer (treino + dieta)
 │   └── weeklyStore.ts       # Estado do plano semanal
 ├── types/
 │   ├── index.ts
-│   └── nutrition.ts         # Tipos do módulo de nutrição
+│   └── nutrition.ts         # Tipos nutrição + TrainerDietPlan + TrainerDietPlanItem
 ├── utils/
 │   └── nutritionCalc.ts     # Fórmulas BMR/TDEE + constantes XP nutrição
 └── App.tsx                  # Rotas e CSS global
@@ -172,6 +179,43 @@ adiciona `role` (admin/trainer/student), `trainer_code`, `must_change_password` 
 
 **Script do módulo de nutrição** — [`supabase/nutrition_migration.sql`](supabase/nutrition_migration.sql):
 cria as tabelas `meal_entries`, `water_logs`, `weight_logs` e `nutrition_goals` com RLS e índices.
+
+**Tabelas de planos alimentares do personal** — execute no SQL Editor:
+
+```sql
+CREATE TABLE IF NOT EXISTS public.trainer_diet_plans (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  trainer_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  student_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  plan_name TEXT NOT NULL DEFAULT '',
+  objective TEXT NOT NULL DEFAULT 'maintenance',
+  notes TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS public.trainer_diet_plan_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  plan_id UUID NOT NULL REFERENCES public.trainer_diet_plans(id) ON DELETE CASCADE,
+  meal_type TEXT NOT NULL DEFAULT 'breakfast',
+  food_name TEXT NOT NULL DEFAULT '',
+  quantity_g DECIMAL(8,1),
+  calories DECIMAL(8,1) NOT NULL DEFAULT 0,
+  protein DECIMAL(6,1) NOT NULL DEFAULT 0,
+  carbs DECIMAL(6,1) NOT NULL DEFAULT 0,
+  fats DECIMAL(6,1) NOT NULL DEFAULT 0,
+  notes TEXT NOT NULL DEFAULT '',
+  order_index INTEGER NOT NULL DEFAULT 0
+);
+ALTER TABLE public.trainer_diet_plans ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.trainer_diet_plan_items ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Trainer manage diet plans" ON public.trainer_diet_plans FOR ALL USING (auth.uid() = trainer_id) WITH CHECK (auth.uid() = trainer_id);
+CREATE POLICY "Student read diet plans"   ON public.trainer_diet_plans FOR SELECT USING (auth.uid() = student_id);
+CREATE POLICY "Trainer manage diet plan items" ON public.trainer_diet_plan_items FOR ALL
+  USING (EXISTS (SELECT 1 FROM public.trainer_diet_plans p WHERE p.id = plan_id AND p.trainer_id = auth.uid()))
+  WITH CHECK (EXISTS (SELECT 1 FROM public.trainer_diet_plans p WHERE p.id = plan_id AND p.trainer_id = auth.uid()));
+CREATE POLICY "Student read diet plan items" ON public.trainer_diet_plan_items FOR SELECT
+  USING (EXISTS (SELECT 1 FROM public.trainer_diet_plans p WHERE p.id = plan_id AND p.student_id = auth.uid()));
+```
 
 > Após rodar os scripts, defina o papel de admin diretamente no SQL:
 > ```sql
