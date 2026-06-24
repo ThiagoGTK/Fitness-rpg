@@ -25,6 +25,8 @@
 - **Resumo diário** — barra de progresso de calorias, macros (proteína/carbs/gorduras) e hidratação
 - **Registro de refeições** — 5 tipos (café da manhã, almoço, lanche, jantar, ceia), cada um com lista de alimentos e macros opcionais
 - **Tabela TACO integrada** — 130 alimentos brasileiros (UNICAMP, 4ª ed.) com busca por autocomplete (sem acento obrigatório); selecionar um alimento preenche os macros automaticamente; alterar a quantidade recalcula em tempo real; entrada manual disponível como fallback
+- **Alimentos personalizados** — cadastre alimentos que não estão no TACO (Tortilha, Pão Sírio, Whey da sua marca…) com macros por 100g; aparecem na mesma busca, marcados com ícone de favorito; gerenciados em "Meus alimentos" na aba Refeições
+- **Modelos de refeição** — monte uma refeição completa (ex: "Café da manhã habitual") com múltiplos alimentos em cada tipo de refeição e salve; com um clique em "Aplicar modelo" todos os itens são adicionados ao dia selecionado
 - **Rastreamento de água** — botões de adição rápida (150ml–750ml), quantidade personalizada e log do dia
 - **Calculadora de macros** — fórmula Mifflin-St Jeor: calcula TMB, TDEE e distribui macros conforme objetivo e nível de atividade; resultado salvo como metas pessoais
 - **Histórico de peso corporal** — registro por data com delta entre entradas e variação total
@@ -215,6 +217,49 @@ CREATE POLICY "Trainer manage diet plan items" ON public.trainer_diet_plan_items
   WITH CHECK (EXISTS (SELECT 1 FROM public.trainer_diet_plans p WHERE p.id = plan_id AND p.trainer_id = auth.uid()));
 CREATE POLICY "Student read diet plan items" ON public.trainer_diet_plan_items FOR SELECT
   USING (EXISTS (SELECT 1 FROM public.trainer_diet_plans p WHERE p.id = plan_id AND p.student_id = auth.uid()));
+```
+
+**Tabelas de alimentos personalizados e modelos de refeição** — execute no SQL Editor:
+
+```sql
+CREATE TABLE IF NOT EXISTS public.custom_foods (
+  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id          UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name             TEXT NOT NULL,
+  kcal_per_100g    DECIMAL(8,1) NOT NULL DEFAULT 0,
+  protein_per_100g DECIMAL(6,1) NOT NULL DEFAULT 0,
+  carbs_per_100g   DECIMAL(6,1) NOT NULL DEFAULT 0,
+  fats_per_100g    DECIMAL(6,1) NOT NULL DEFAULT 0,
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS public.meal_templates (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name       TEXT NOT NULL,
+  notes      TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS public.meal_template_items (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  template_id UUID NOT NULL REFERENCES public.meal_templates(id) ON DELETE CASCADE,
+  meal_type   TEXT NOT NULL DEFAULT 'breakfast',
+  food_name   TEXT NOT NULL,
+  quantity_g  DECIMAL(8,1),
+  calories    DECIMAL(8,1) NOT NULL DEFAULT 0,
+  protein     DECIMAL(6,1) NOT NULL DEFAULT 0,
+  carbs       DECIMAL(6,1) NOT NULL DEFAULT 0,
+  fats        DECIMAL(6,1) NOT NULL DEFAULT 0,
+  order_index INTEGER NOT NULL DEFAULT 0
+);
+ALTER TABLE public.custom_foods        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.meal_templates      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.meal_template_items ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "own custom_foods"   ON public.custom_foods        FOR ALL USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+CREATE POLICY "own meal_templates" ON public.meal_templates      FOR ALL USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+CREATE POLICY "own template_items" ON public.meal_template_items FOR ALL
+  USING  (EXISTS (SELECT 1 FROM public.meal_templates t WHERE t.id = template_id AND t.user_id = auth.uid()))
+  WITH CHECK (EXISTS (SELECT 1 FROM public.meal_templates t WHERE t.id = template_id AND t.user_id = auth.uid()));
 ```
 
 > Após rodar os scripts, defina o papel de admin diretamente no SQL:
