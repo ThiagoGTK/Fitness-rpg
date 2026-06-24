@@ -98,6 +98,44 @@ export interface DailyNutritionSummary {
   waterMl:  number;
 }
 
+// ── Custom foods (user-defined, appears alongside TACO) ──────────────────────
+
+export interface CustomFood {
+  id:              string;
+  userId:          string;
+  name:            string;
+  kcalPer100g:     number;
+  proteinPer100g:  number;
+  carbsPer100g:    number;
+  fatsPer100g:     number;
+  createdAt:       string;
+}
+
+// ── Meal templates (user-saved reusable meals) ────────────────────────────────
+
+export interface MealTemplateItem {
+  id:          string;
+  templateId:  string;
+  mealType:    MealType;
+  foodName:    string;
+  quantityG?:  number;
+  calories:    number;
+  protein:     number;
+  carbs:       number;
+  fats:        number;
+  orderIndex:  number;
+}
+
+export interface MealTemplate {
+  id:        string;
+  userId:    string;
+  name:      string;
+  notes:     string;
+  items:     MealTemplateItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 // ── Trainer diet plan types ───────────────────────────────────────────────────
 
 export interface TrainerDietPlanItem {

@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import type {
   MealEntry, WaterLog, WeightLog, NutritionGoals,
   MealType, NutritionObjective, ActivityLevel, DailyNutritionSummary,
+  CustomFood, MealTemplate, MealTemplateItem,
 } from '../types/nutrition';
 import { NUTRITION_XP, NUTRITION_ACHIEVEMENT_IDS } from '../utils/nutritionCalc';
 import { useGameStore } from './gameStore';
@@ -14,9 +15,10 @@ interface NutritionStore {
   waterLogs:    WaterLog[];
   weightLogs:   WeightLog[];
   goals:        NutritionGoals | null;
+  customFoods:  CustomFood[];
+  templates:    MealTemplate[];
   loading:      boolean;
   initialized:  boolean;
-  // Achievement IDs that were just unlocked (shown as toast), cleared after read
   newAchievements: string[];
 
   initNutritionData:  (userId: string) => Promise<void>;
@@ -55,6 +57,18 @@ interface NutritionStore {
     heightCm?:     number;
     activityLevel: ActivityLevel;
   }) => Promise<void>;
+
+  // Custom foods
+  createCustomFood: (data: {
+    name: string; kcalPer100g: number; proteinPer100g: number;
+    carbsPer100g: number; fatsPer100g: number;
+  }) => Promise<CustomFood | null>;
+  deleteCustomFood: (id: string) => Promise<void>;
+
+  // Meal templates
+  createTemplate: (name: string, notes: string, items: Omit<MealTemplateItem, 'id' | 'templateId'>[]) => Promise<void>;
+  updateTemplate: (id: string, name: string, notes: string, items: Omit<MealTemplateItem, 'id' | 'templateId'>[]) => Promise<void>;
+  deleteTemplate: (id: string) => Promise<void>;
 
   // Computed selectors
   getMealEntriesForDate: (date: string) => MealEntry[];
@@ -149,6 +163,8 @@ export const useNutritionStore = create<NutritionStore>((set, get) => ({
   waterLogs:       [],
   weightLogs:      [],
   goals:           null,
+  customFoods:     [],
+  templates:       [],
   loading:         false,
   initialized:     false,
   newAchievements: [],
@@ -163,7 +179,7 @@ export const useNutritionStore = create<NutritionStore>((set, get) => ({
     cutoff.setDate(cutoff.getDate() - 60);
     const cutoffStr = cutoff.toISOString().slice(0, 10);
 
-    const [mealsRes, waterRes, weightRes, goalsRes] = await Promise.all([
+    const [mealsRes, waterRes, weightRes, goalsRes, customFoodsRes, templatesRes] = await Promise.all([
       supabase.from('meal_entries')
         .select('*')
         .eq('user_id', userId)
@@ -182,6 +198,14 @@ export const useNutritionStore = create<NutritionStore>((set, get) => ({
         .select('*')
         .eq('user_id', userId)
         .maybeSingle(),
+      supabase.from('custom_foods')
+        .select('*')
+        .eq('user_id', userId)
+        .order('name', { ascending: true }),
+      supabase.from('meal_templates')
+        .select('*, meal_template_items(*)')
+        .eq('user_id', userId)
+        .order('updated_at', { ascending: false }),
     ]);
 
     const mealEntries: MealEntry[] = (mealsRes.data ?? []).map(r => ({
@@ -229,11 +253,46 @@ export const useNutritionStore = create<NutritionStore>((set, get) => ({
       updatedAt:     g.updated_at,
     } : null;
 
-    set({ mealEntries, waterLogs, weightLogs, goals, loading: false, initialized: true });
+    const customFoods: CustomFood[] = (customFoodsRes.data ?? []).map(r => ({
+      id:             r.id,
+      userId:         r.user_id,
+      name:           r.name,
+      kcalPer100g:    Number(r.kcal_per_100g),
+      proteinPer100g: Number(r.protein_per_100g),
+      carbsPer100g:   Number(r.carbs_per_100g),
+      fatsPer100g:    Number(r.fats_per_100g),
+      createdAt:      r.created_at,
+    }));
+
+    const templates: MealTemplate[] = (templatesRes.data ?? []).map(r => ({
+      id:        r.id,
+      userId:    r.user_id,
+      name:      r.name,
+      notes:     r.notes ?? '',
+      createdAt: r.created_at,
+      updatedAt: r.updated_at,
+      items: ((r.meal_template_items as any[]) ?? [])
+        .sort((a: any, b: any) => (a.order_index ?? 0) - (b.order_index ?? 0))
+        .map((i: any): MealTemplateItem => ({
+          id:         i.id,
+          templateId: i.template_id,
+          mealType:   i.meal_type as MealType,
+          foodName:   i.food_name,
+          quantityG:  i.quantity_g != null ? Number(i.quantity_g) : undefined,
+          calories:   Number(i.calories) || 0,
+          protein:    Number(i.protein)  || 0,
+          carbs:      Number(i.carbs)    || 0,
+          fats:       Number(i.fats)     || 0,
+          orderIndex: i.order_index ?? 0,
+        })),
+    }));
+
+    set({ mealEntries, waterLogs, weightLogs, goals, customFoods, templates, loading: false, initialized: true });
   },
 
   clearNutritionData: () => set({
     mealEntries: [], waterLogs: [], weightLogs: [], goals: null,
+    customFoods: [], templates: [],
     loading: false, initialized: false, newAchievements: [],
   }),
 
@@ -439,6 +498,111 @@ export const useNutritionStore = create<NutritionStore>((set, get) => ({
 
     // Unlock "goals set" achievement
     await unlockAchievement(userId, NUTRITION_ACHIEVEMENT_IDS.GOALS_SET, set);
+  },
+
+  // ── Custom foods ─────────────────────────────────────────────────────────
+
+  createCustomFood: async (data) => {
+    const userId = (await supabase.auth.getUser()).data.user?.id;
+    if (!userId) return null;
+    const { data: row, error } = await supabase
+      .from('custom_foods')
+      .insert({
+        user_id:          userId,
+        name:             data.name,
+        kcal_per_100g:    data.kcalPer100g,
+        protein_per_100g: data.proteinPer100g,
+        carbs_per_100g:   data.carbsPer100g,
+        fats_per_100g:    data.fatsPer100g,
+      })
+      .select()
+      .single();
+    if (error || !row) return null;
+    const food: CustomFood = {
+      id:             row.id,
+      userId:         row.user_id,
+      name:           row.name,
+      kcalPer100g:    Number(row.kcal_per_100g),
+      proteinPer100g: Number(row.protein_per_100g),
+      carbsPer100g:   Number(row.carbs_per_100g),
+      fatsPer100g:    Number(row.fats_per_100g),
+      createdAt:      row.created_at,
+    };
+    set(s => ({ customFoods: [...s.customFoods, food].sort((a, b) => a.name.localeCompare(b.name)) }));
+    return food;
+  },
+
+  deleteCustomFood: async (id) => {
+    const { error } = await supabase.from('custom_foods').delete().eq('id', id);
+    if (!error) set(s => ({ customFoods: s.customFoods.filter(f => f.id !== id) }));
+  },
+
+  // ── Meal templates ───────────────────────────────────────────────────────
+
+  createTemplate: async (name, notes, items) => {
+    const userId = (await supabase.auth.getUser()).data.user?.id;
+    if (!userId) return;
+    const now = new Date().toISOString();
+    const { data: tRow, error } = await supabase
+      .from('meal_templates')
+      .insert({ user_id: userId, name, notes, updated_at: now })
+      .select()
+      .single();
+    if (error || !tRow) return;
+    if (items.length > 0) {
+      await supabase.from('meal_template_items').insert(
+        items.map((item, i) => ({
+          template_id: tRow.id,
+          meal_type:   item.mealType,
+          food_name:   item.foodName,
+          quantity_g:  item.quantityG ?? null,
+          calories:    item.calories,
+          protein:     item.protein,
+          carbs:       item.carbs,
+          fats:        item.fats,
+          order_index: item.orderIndex ?? i,
+        }))
+      );
+    }
+    const template: MealTemplate = {
+      id: tRow.id, userId, name, notes, createdAt: tRow.created_at, updatedAt: now,
+      items: items.map((item, i) => ({ ...item, id: '', templateId: tRow.id, orderIndex: item.orderIndex ?? i })),
+    };
+    set(s => ({ templates: [template, ...s.templates] }));
+  },
+
+  updateTemplate: async (id, name, notes, items) => {
+    const now = new Date().toISOString();
+    await supabase.from('meal_templates').update({ name, notes, updated_at: now }).eq('id', id);
+    await supabase.from('meal_template_items').delete().eq('template_id', id);
+    if (items.length > 0) {
+      await supabase.from('meal_template_items').insert(
+        items.map((item, i) => ({
+          template_id: id,
+          meal_type:   item.mealType,
+          food_name:   item.foodName,
+          quantity_g:  item.quantityG ?? null,
+          calories:    item.calories,
+          protein:     item.protein,
+          carbs:       item.carbs,
+          fats:        item.fats,
+          order_index: item.orderIndex ?? i,
+        }))
+      );
+    }
+    set(s => ({
+      templates: s.templates.map(t =>
+        t.id !== id ? t : {
+          ...t, name, notes, updatedAt: now,
+          items: items.map((item, i) => ({ ...item, id: '', templateId: id, orderIndex: item.orderIndex ?? i })),
+        }
+      ),
+    }));
+  },
+
+  deleteTemplate: async (id) => {
+    const { error } = await supabase.from('meal_templates').delete().eq('id', id);
+    if (!error) set(s => ({ templates: s.templates.filter(t => t.id !== id) }));
   },
 
   // ── Computed selectors ───────────────────────────────────────────────────
