@@ -1207,8 +1207,17 @@ function TemplateFormModal({
           if (mealItems.length === 0) return null;
           return (
             <div key={mealType} style={{ marginBottom: 18 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#94a3b8', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 16 }}>{MEAL_EMOJIS[mealType]}</span> {MEAL_LABELS[mealType]}
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#94a3b8', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 16 }}>{MEAL_EMOJIS[mealType]}</span> {MEAL_LABELS[mealType]}
+                  <span style={{ fontSize: 11, color: '#475569', fontWeight: 400 }}>{mealItems.length} {mealItems.length === 1 ? 'item' : 'itens'}</span>
+                </span>
+                <button
+                  onClick={() => setItems(prev => [...prev, emptyTemplateItem(mealType)])}
+                  style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 7, border: '1px solid #1e2d4a', background: 'transparent', color: '#a855f7', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+                >
+                  <Plus size={11} /> alimento
+                </button>
               </div>
               <div style={{ display: 'grid', gap: 8 }}>
                 {mealItems.map(it => (
@@ -1275,12 +1284,13 @@ function TemplateFormModal({
           );
         })}
 
-        {/* Add item row */}
+        {/* Add new meal section (for meal types not yet added) */}
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
+          <span style={{ fontSize: 11, color: '#475569', alignSelf: 'center', marginRight: 2 }}>Adicionar refeição:</span>
           {(Object.keys(MEAL_LABELS) as MealType[]).map(mt => (
             <button key={mt} onClick={() => setItems(prev => [...prev, emptyTemplateItem(mt)])}
               style={{ padding: '6px 12px', borderRadius: 7, border: '1px solid #1e2d4a', background: 'transparent', color: '#64748b', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-              <Plus size={11} /> {MEAL_EMOJIS[mt]} {MEAL_LABELS[mt]}
+              {MEAL_EMOJIS[mt]} {MEAL_LABELS[mt]}
             </button>
           ))}
         </div>
